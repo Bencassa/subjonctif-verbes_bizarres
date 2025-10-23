@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cycle de Jeux - Le Subjonctif</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function SubjonctifGame() {
+            const [screen, setScreen] = useState('intro');
+            const [currentLevel, setCurrentLevel] = useState(0);
+            const [currentQuestion, setCurrentQuestion] = useState(0);
+            const [selectedPieces, setSelectedPieces] = useState([]);
+            const [availablePieces, setAvailablePieces] = useState([]);
+            const [selectedVerb, setSelectedVerb] = useState('');
+            const [showHint, setShowHint] = useState(false);
+            const [feedback, setFeedback] = useState('');
+            const [correctAnswer, setCorrectAnswer] = useState('');
+            const [showContinue, setShowContinue] = useState(false);
+            const [levelScores, setLevelScores] = useState([0, 0, 0]);
+            const [levelProgress, setLevelProgress] = useState([0, 0, 0]);
+            const [showNegationExplanation, setShowNegationExplanation] = useState(false);
+            const [expandedVerbs, setExpandedVerbs] = useState({});
+            const [level3Selections, setLevel3Selections] = useState([null, null, null, null]);
+            const [showVerbChoice, setShowVerbChoice] = useState(false);
+            const [showCategoryChoice, setShowCategoryChoice] = useState(false);
+            const [selectedCategory, setSelectedCategory] = useState('');
+            const [badges, setBadges] = useState([]);
+            const [currentStreak, setCurrentStreak] = useState(0);
+            const [bestStreak, setBestStreak] = useState(0);
+            const [comboBonus, setComboBonus] = useState(0);
+            const [showMidLevelMessage, setShowMidLevelMessage] = useState(false);
+            const [showChallengeMessage, setShowChallengeMessage] = useState(false);
+            const [expandedExamples, setExpandedExamples] = useState({});
+
+            const verbConjugations = {
+                etre: {
+                    name: 'ÊTRE',
+                    color: '#3B82F6',
+                    forms: [
+                        { subject: 'que je', form: 'sois', radical: 'soi', ending: 's' },
+                        { subject: 'que tu', form: 'sois', radical: 'soi', ending: 's' },
+                        { subject: 'qu\'il/elle', form: 'soit', radical: 'soi', ending: 't' },
+                        { subject: 'que nous', form: 'soyons', radical: 'soy', ending: 'ons' },
+                        { subject: 'que vous', form: 'soyez', radical: 'soy', ending: 'ez' },
+                        { subject: 'qu\'ils/elles', form: 'soient', radical: 'soi', ending: 'ent' }
+                    ]
+                },
+                avoir: {
+                    name: 'AVOIR',
+                    color: '#10B981',
+                    forms: [
+                        { subject: 'que j\'', form: 'aie', radical: 'ai', ending: 'e' },
+                        { subject: 'que tu', form: 'aies', radical: 'ai', ending: 'es' },
+                        { subject: 'qu\'il/elle', form: 'ait', radical: 'ai', ending: 't' },
+                        { subject: 'que nous', form: 'ayons', radical: 'ay', ending: 'ons' },
+                        { subject: 'que vous', form: 'ayez', radical: 'ay', ending: 'ez' },
+                        { subject: 'qu\'ils/elles', form: 'aient', radical: 'ai', ending: 'ent' }
+                    ]
+                },
+                aller: {
+                    name: 'ALLER',
+                    color: '#F59E0B',
+                    forms: [
+                        { subject: 'que j\'', form: 'aille', radical: 'aill', ending: 'e' },
+                        { subject: 'que tu', form: 'ailles', radical: 'aill', ending: 'es' },
+                        { subject: 'qu\'il/elle', form: 'aille', radical: 'aill', ending: 'e' },
+                        { subject: 'que nous', form: 'allions', radical: 'all', ending: 'ions' },
+                        { subject: 'que vous', form: 'alliez', radical: 'all', ending: 'iez' },
+                        { subject: 'qu\'ils/elles', form: 'aillent', radical: 'aill', ending: 'ent' }
+                    ]
+                },
+                faire: {
+                    name: 'FAIRE',
+                    color: '#EF4444',
+                    forms: [
+                        { subject: 'que je', form: 'fasse', radical: 'fass', ending: 'e' },
+                        { subject: 'que tu', form: 'fasses', radical: 'fass', ending: 'es' },
+                        { subject: 'qu\'il/elle', form: 'fasse', radical: 'fass', ending: 'e' },
+                        { subject: 'que nous', form: 'fassions', radical: 'fass', ending: 'ions' },
+                        { subject: 'que vous', form: 'fassiez', radical: 'fass', ending: 'iez' },
+                        { subject: 'qu\'ils/elles', form: 'fassent', radical: 'fass', ending: 'ent' }
+                    ]
+                },
+                pouvoir: {
+                    name: 'POUVOIR',
+                    color: '#8B5CF6',
+                    forms: [
+                        { subject: 'que je', form: 'puisse', radical: 'puiss', ending: 'e' },
+                        { subject: 'que tu', form: 'puisses', radical: 'puiss', ending: 'es' },
+                        { subject: 'qu\'il/elle', form: 'puisse', radical: 'puiss', ending: 'e' },
+                        { subject: 'que nous', form: 'puissions', radical: 'puiss', ending: 'ions' },
+                        { subject: 'que vous', form: 'puissiez', radical: 'puiss', ending: 'iez' },
+                        { subject: 'qu\'ils/elles', form: 'puissent', radical: 'puiss', ending: 'ent' }
+                    ]
+                },
+                savoir: {
+                    name: 'SAVOIR',
+                    color: '#EC4899',
+                    forms: [
+                        { subject: 'que je', form: 'sache', radical: 'sach', ending: 'e' },
+                        { subject: 'que tu', form: 'saches', radical: 'sach', ending: 'es' },
+                        { subject: 'qu\'il/elle', form: 'sache', radical: 'sach', ending: 'e' },
+                        { subject: 'que nous', form: 'sachions', radical: 'sach', ending: 'ions' },
+                        { subject: 'que vous', form: 'sachiez', radical: 'sach', ending: 'iez' },
+                        { subject: 'qu\'ils/elles', form: 'sachent', radical: 'sach', ending: 'ent' }
+                    ]
+                },
+                vouloir: {
+                    name: 'VOULOIR',
+                    color: '#14B8A6',
+                    forms: [
+                        { subject: 'que je', form: 'veuille', radical: 'veuill', ending: 'e' },
+                        { subject: 'que tu', form: 'veuilles', radical: 'veuill', ending: 'es' },
+                        { subject: 'qu\'il/elle', form: 'veuille', radical: 'veuill', ending: 'e' },
+                        { subject: 'que nous', form: 'voulions', radical: 'voul', ending: 'ions' },
+                        { subject: 'que vous', form: 'vouliez', radical: 'voul', ending: 'iez' },
+                        { subject: 'qu\'ils/elles', form: 'veuillent', radical: 'veuill', ending: 'ent' }
+                    ]
+                }
+            };
+
+            // Fonction pour analyser et colorer une phrase
+            const parseAndColorSentence = (sentence, markerStart) => {
+                // Liste étendue des verbes au subjonctif
+                const subjunctiveVerbs = [
+                    // être
+                    'sois', 'soit', 'soyons', 'soyez', 'soient',
+                    // avoir
+                    'aie', 'aies', 'ait', 'ayons', 'ayez', 'aient',
+                    // aller
+                    'aille', 'ailles', 'allions', 'alliez', 'aillent',
+                    // faire
+                    'fasse', 'fasses', 'fassions', 'fassiez', 'fassent',
+                    // pouvoir
+                    'puisse', 'puisses', 'puissions', 'puissiez', 'puissent',
+                    // savoir
+                    'sache', 'saches', 'sachions', 'sachiez', 'sachent',
+                    // vouloir
+                    'veuille', 'veuilles', 'voulions', 'vouliez', 'veuillent',
+                    // venir
+                    'vienne', 'viennes', 'venions', 'veniez', 'viennent',
+                    // partir
+                    'parte', 'partes', 'partions', 'partiez', 'partent',
+                    // comprendre
+                    'comprenne', 'comprennes', 'comprenions', 'compreniez', 'comprennent',
+                    // réussir
+                    'réussisse', 'réussisses', 'réussissions', 'réussissiez', 'réussissent',
+                    // répondre
+                    'réponde', 'répondes', 'répondions', 'répondiez', 'répondent'
+                ];
+
+                // Pronoms sujets possibles
+                const pronouns = ['je', 'j\'', 'tu', 'il', 'elle', 'on', 'nous', 'vous', 'ils', 'elles'];
+
+                let result = [];
+                
+                // 1. Trouver le marqueur dans la phrase
+                const markerLower = markerStart.toLowerCase().replace(/\s+/g, ' ').trim();
+                const sentenceLower = sentence.toLowerCase();
+                
+                let markerIndex = -1;
+                let actualMarkerText = '';
+                
+                // Chercher le marqueur exact d'abord
+                markerIndex = sentenceLower.indexOf(markerLower);
+                if (markerIndex !== -1) {
+                    actualMarkerText = sentence.substring(markerIndex, markerIndex + markerStart.length);
+                } else {
+                    // Si pas trouvé, chercher avec "qu'" à la place de "que"
+                    const markerWithApostrophe = markerLower.replace(/\sque?$/i, ' qu\'');
+                    markerIndex = sentenceLower.indexOf(markerWithApostrophe);
+                    if (markerIndex !== -1) {
+                        actualMarkerText = sentence.substring(markerIndex, markerIndex + markerWithApostrophe.length);
+                    }
+                }
+                
+                if (markerIndex === -1) {
+                    return [{ text: sentence, color: '#374151', label: 'Texte' }];
+                }
+
+                // Ajouter le texte avant le marqueur s'il existe
+                if (markerIndex > 0) {
+                    result.push({
+                        text: sentence.substring(0, markerIndex).trim(),
+                        color: '#374151',
+                        label: 'Contexte'
+                    });
+                }
+
+                // 2. Ajouter le marqueur en rouge
+                result.push({
+                    text: actualMarkerText,
+                    color: '#DC2626',
+                    label: 'Marqueur'
+                });
+
+                // 3. Analyser le reste après le marqueur
+                let remainingText = sentence.substring(markerIndex + actualMarkerText.length).trim();
+                
+                // Supprimer l'espace après l'apostrophe si présent
+                remainingText = remainingText.replace(/^'\s+/, '\'');
+                
+                const words = remainingText.split(/\s+/);
+                
+                // Trouver le verbe au subjonctif d'abord
+                let verbIndex = -1;
+                let subjectIndex = -1;
+                
+                for (let i = 0; i < words.length; i++) {
+                    const word = words[i].toLowerCase().replace(/[,.!?]/g, '');
+                    
+                    if (subjunctiveVerbs.includes(word)) {
+                        verbIndex = i;
+                        
+                        // Chercher le sujet en remontant depuis le verbe
+                        for (let j = i - 1; j >= 0; j--) {
+                            const potentialSubject = words[j].toLowerCase().replace(/[,.!?]/g, '');
+                            if (pronouns.includes(potentialSubject) || pronouns.includes(words[j].toLowerCase())) {
+                                subjectIndex = j;
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+
+                if (subjectIndex !== -1 && verbIndex !== -1) {
+                    // Ajouter le texte avant le sujet
+                    if (subjectIndex > 0) {
+                        result.push({
+                            text: words.slice(0, subjectIndex).join(' '),
+                            color: '#374151',
+                            label: 'Contexte'
+                        });
+                    }
+
+                    // Ajouter le sujet en bleu
+                    result.push({
+                        text: words[subjectIndex],
+                        color: '#2563EB',
+                        label: 'Sujet'
+                    });
+
+                    // Ajouter le texte entre sujet et verbe (négation)
+                    if (verbIndex > subjectIndex + 1) {
+                        const betweenText = words.slice(subjectIndex + 1, verbIndex).join(' ');
+                        result.push({
+                            text: betweenText,
+                            color: '#F97316',
+                            label: 'Négation'
+                        });
+                    }
+
+                    // Ajouter le verbe en vert
+                    result.push({
+                        text: words[verbIndex],
+                        color: '#059669',
+                        label: 'Verbe'
+                    });
+
+                    // Traiter le complément en cherchant "pas"
+                    if (verbIndex < words.length - 1) {
+                        const remainingWords = words.slice(verbIndex + 1);
+                        let pasFound = false;
+                        
+                        // Chercher "pas" dans les premiers mots
+                        for (let i = 0; i < Math.min(2, remainingWords.length); i++) {
+                            if (remainingWords[i].toLowerCase().replace(/[,.!?]/g, '') === 'pas') {
+                                // Ajouter "pas" en orange (négation)
+                                result.push({
+                                    text: remainingWords[i],
+                                    color: '#F97316',
+                                    label: 'Négation'
+                                });
+                                
+                                // Ajouter le reste après "pas"
+                                if (i < remainingWords.length - 1) {
+                                    result.push({
+                                        text: remainingWords.slice(i + 1).join(' '),
+                                        color: '#374151',
+                                        label: 'Complément'
+                                    });
+                                }
+                                pasFound = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!pasFound) {
+                            result.push({
+                                text: remainingWords.join(' '),
+                                color: '#374151',
+                                label: 'Complément'
+                            });
+                        }
+                    }
+                } else {
+                    result.push({
+                        text: remainingText,
+                        color: '#374151',
+                        label: 'Texte'
+                    });
+                }
+
+                return result;
+            };
+
+            const renderColoredSentence = (parts) => {
+                const sentenceHTML = parts.map((part, index) => 
+                    `<span style="color: ${part.color}; font-weight: 600;">${part.text}${index < parts.length - 1 ? ' ' : ''}</span>`
+                ).join('');
+                
+                const legendHTML = parts.map((part, index) => 
+                    `<div key="${index}" class="flex items-center gap-2 mb-1">
+                        <div class="w-4 h-4 rounded" style="background-color: ${part.color};"></div>
+                        <span class="font-medium">${part.label}:</span>
+                        <span class="italic">${part.text}</span>
+                    </div>`
+                ).join('');
+                
+                return (
+                    <div className="space-y-3">
+                        <div className="text-xl leading-relaxed" dangerouslySetInnerHTML={{__html: sentenceHTML}} />
+                        <div className="text-sm text-gray-600 border-t pt-2 mt-2" dangerouslySetInnerHTML={{__html: legendHTML}} />
+                    </div>
+                );
+            };
+
+            const levels = [
+                {
+                    title: "Niveau 1 : Morceaux de phrases",
+                    description: "Remets les morceaux de phrases dans le bon ordre",
+                    icon: "🧩",
+                    questions: [
+                        { pieces: ["Il faut que", "tu sois", "patient avec eux."], correct: "Il faut que tu sois patient avec eux.", categories: ["Souhait/envie", "Besoin/nécessité", "Doute/incertitude"], correctCategory: "Besoin/nécessité", hint: "Commence par chercher le marqueur du subjonctif" },
+                        { pieces: ["Je veux que", "vous ayez", "confiance en vous."], correct: "Je veux que vous ayez confiance en vous.", categories: ["Souhait/envie", "Besoin/nécessité", "Émotion/sentiment"], correctCategory: "Souhait/envie", hint: "Quel est le marqueur ?" },
+                        { pieces: ["Bien qu'il", "fasse froid,", "nous allons nous promener."], correct: "Bien qu'il fasse froid, nous allons nous promener.", categories: ["Souhait/envie", "Manière", "Doute/incertitude"], correctCategory: "Manière", hint: "Attention à la virgule" },
+                        { pieces: ["Il est important que", "nous allions", "à la réunion."], correct: "Il est important que nous allions à la réunion.", categories: ["Besoin/nécessité", "Jugement/opinion", "Émotion/sentiment"], correctCategory: "Besoin/nécessité", hint: "Le marqueur est Il est important que" },
+                        { pieces: ["Je doute qu'elle", "puisse", "venir demain."], correct: "Je doute qu'elle puisse venir demain.", categories: ["Doute/incertitude", "Souhait/envie", "Besoin/nécessité"], correctCategory: "Doute/incertitude", hint: "Le doute déclenche le subjonctif" },
+                        { pieces: ["Il faut que", "tu saches", "la vérité."], correct: "Il faut que tu saches la vérité.", categories: ["Besoin/nécessité", "Souhait/envie", "Émotion/sentiment"], correctCategory: "Besoin/nécessité", hint: "Marqueur de nécessité" },
+                        { pieces: ["Pourvu qu'ils", "aient", "de la chance."], correct: "Pourvu qu'ils aient de la chance.", categories: ["J'espère que", "Doute/incertitude", "Souhait/envie"], correctCategory: "J'espère que", hint: "Pourvu que = j'espère que" },
+                        { pieces: ["Je souhaite que", "vous fassiez", "attention."], correct: "Je souhaite que vous fassiez attention.", categories: ["Souhait/envie", "Besoin/nécessité", "Émotion/sentiment"], correctCategory: "Souhait/envie", hint: "Le souhait déclenche le subjonctif" },
+                        { pieces: ["Avant qu'on", "aille au cinéma,", "je dois finir mes devoirs."], correct: "Avant qu'on aille au cinéma, je dois finir mes devoirs.", categories: ["Manière", "Souhait/envie", "Doute/incertitude"], correctCategory: "Manière", hint: "Avant que + subjonctif" },
+                        { pieces: ["Il est nécessaire que", "je sois", "là à 8h."], correct: "Il est nécessaire que je sois là à 8h.", categories: ["Besoin/nécessité", "Jugement/opinion", "Émotion/sentiment"], correctCategory: "Besoin/nécessité", hint: "Nécessité = subjonctif" },
+                        { pieces: ["Pour qu'il", "comprenne", "bien, j'utilise des schémas."], correct: "Pour qu'il comprenne bien, j'utilise des schémas.", categories: ["But", "Manière", "Souhait/envie"], correctCategory: "But", hint: "Pour que = exprime un but" },
+                        { pieces: ["Afin que", "nous puissions", "réussir, je t'explique tout."], correct: "Afin que nous puissions réussir, je t'explique tout.", categories: ["But", "Besoin/nécessité", "Souhait/envie"], correctCategory: "But", hint: "Afin que = exprime un but" },
+                        { pieces: ["Sans que", "nous le sachions,", "il est parti."], correct: "Sans que nous le sachions, il est parti.", categories: ["Manière", "Doute/incertitude", "Émotion/sentiment"], correctCategory: "Manière", hint: "Sans que = exprime une manière" },
+                        { pieces: ["À condition que", "vous soyez", "sérieux, je suis d'accord."], correct: "À condition que vous soyez sérieux, je suis d'accord.", categories: ["Manière", "But", "Besoin/nécessité"], correctCategory: "Manière", hint: "À condition que = exprime une manière" }
+                    ]
+                },
+                {
+                    title: "Niveau 2 : Mots mélangés + Choix du verbe",
+                    description: "Remets les mots dans l'ordre et choisis le bon infinitif",
+                    icon: "🔤",
+                    questions: [
+                        { pieces: ["Il", "faut", "que", "tu", "sois", "prêt."], verbs: ["être", "avoir", "aller", "faire"], correctVerb: "être", correct: "Il faut que tu sois prêt.", hint: "Il faut que + sujet + verbe", hasNegation: false },
+                        { pieces: ["Je", "voudrais", "que", "vous", "ayez", "la", "réponse."], verbs: ["être", "avoir", "savoir", "faire"], correctVerb: "avoir", correct: "Je voudrais que vous ayez la réponse.", hint: "Je voudrais que + vous + ayez", hasNegation: false },
+                        { pieces: ["Bien", "que", "nous", "puissions", "travailler", "ensemble,", "c'est", "difficile."], verbs: ["être", "avoir", "pouvoir", "vouloir"], correctVerb: "pouvoir", correct: "Bien que nous puissions travailler ensemble, c'est difficile.", hint: "Bien que + nous + puissions", hasNegation: false },
+                        { pieces: ["Je", "veux", "qu'elle", "aille", "bien."], verbs: ["être", "avoir", "aller", "faire"], correctVerb: "aller", correct: "Je veux qu'elle aille bien.", hint: "Je veux + qu'elle + aille", hasNegation: false },
+                        { pieces: ["Pourvu", "qu'il", "fasse", "beau", "demain."], verbs: ["être", "avoir", "aller", "faire"], correctVerb: "faire", correct: "Pourvu qu'il fasse beau demain.", hint: "Pourvu que + il + fasse", hasNegation: false },
+                        { pieces: ["C'est", "important", "qu'elle", "sache", "la", "vérité."], verbs: ["être", "avoir", "savoir", "vouloir"], correctVerb: "savoir", correct: "C'est important qu'elle sache la vérité.", hint: "C'est important que + elle + sache", hasNegation: false },
+                        { pieces: ["Il", "faut", "que", "je", "fasse", "un", "effort."], verbs: ["être", "avoir", "aller", "faire"], correctVerb: "faire", correct: "Il faut que je fasse un effort.", hint: "Il faut que + je + fasse", hasNegation: false },
+                        { pieces: ["J'ai", "peur", "qu'ils", "n'aient", "pas", "compris."], verbs: ["être", "avoir", "savoir", "faire"], correctVerb: "avoir", correct: "J'ai peur qu'ils n'aient pas compris.", hint: "Émotion (peur) + subjonctif", hasNegation: false },
+                        { pieces: ["Je", "ne", "crois", "pas", "qu'il", "veuille", "partir."], verbs: ["être", "avoir", "pouvoir", "vouloir"], correctVerb: "vouloir", correct: "Je ne crois pas qu'il veuille partir.", hint: "Doute négatif + subjonctif", hasNegation: true },
+                        { pieces: ["Il", "faut", "que", "nous", "soyons", "tous", "présents."], verbs: ["être", "avoir", "aller", "faire"], correctVerb: "être", correct: "Il faut que nous soyons tous présents.", hint: "Il faut que + nous + soyons", hasNegation: false }
+                    ]
+                },
+                {
+                    title: "Niveau 3 : Construction libre",
+                    description: "Construis une phrase correcte en choisissant dans chaque colonne",
+                    icon: "🎨",
+                    questions: [
+                        { 
+                            columns: [
+                                ["Il faut que", "Je veux que", "Je souhaite que", "Pourvu que"],
+                                ["tu", "nous", "il", "vous"],
+                                ["sois", "soyons", "soit", "soyez"],
+                                ["content.", "contents.", "heureux.", "heureuses.", "prudent.", "prudents.", "là.", "présent.", "présents."]
+                            ],
+                            validCombinations: [
+                                "Il faut que tu sois content.", "Il faut que tu sois heureux.", "Il faut que tu sois prudent.", "Il faut que tu sois là.", "Il faut que tu sois présent.",
+                                "Il faut que nous soyons contents.", "Il faut que nous soyons heureux.", "Il faut que nous soyons heureuses.", "Il faut que nous soyons prudents.", "Il faut que nous soyons là.", "Il faut que nous soyons présents.",
+                                "Il faut que il soit content.", "Il faut que il soit heureux.", "Il faut que il soit prudent.", "Il faut que il soit là.", "Il faut que il soit présent.",
+                                "Il faut que vous soyez contents.", "Il faut que vous soyez heureux.", "Il faut que vous soyez heureuses.", "Il faut que vous soyez prudents.", "Il faut que vous soyez là.", "Il faut que vous soyez présents.",
+                                "Je veux que tu sois content.", "Je veux que tu sois heureux.", "Je veux que tu sois prudent.", "Je veux que tu sois là.", "Je veux que tu sois présent.",
+                                "Je veux que nous soyons contents.", "Je veux que nous soyons heureux.", "Je veux que nous soyons heureuses.", "Je veux que nous soyons prudents.", "Je veux que nous soyons là.", "Je veux que nous soyons présents.",
+                                "Je veux que il soit content.", "Je veux que il soit heureux.", "Je veux que il soit prudent.", "Je veux que il soit là.", "Je veux que il soit présent.",
+                                "Je veux que vous soyez contents.", "Je veux que vous soyez heureux.", "Je veux que vous soyez heureuses.", "Je veux que vous soyez prudents.", "Je veux que vous soyez là.", "Je veux que vous soyez présents.",
+                                "Je souhaite que tu sois content.", "Je souhaite que tu sois heureux.", "Je souhaite que tu sois prudent.", "Je souhaite que tu sois là.", "Je souhaite que tu sois présent.",
+                                "Je souhaite que nous soyons contents.", "Je souhaite que nous soyons heureux.", "Je souhaite que nous soyons heureuses.", "Je souhaite que nous soyons prudents.", "Je souhaite que nous soyons là.", "Je souhaite que nous soyons présents.",
+                                "Je souhaite que il soit content.", "Je souhaite que il soit heureux.", "Je souhaite que il soit prudent.", "Je souhaite que il soit là.", "Je souhaite que il soit présent.",
+                                "Je souhaite que vous soyez contents.", "Je souhaite que vous soyez heureux.", "Je souhaite que vous soyez heureuses.", "Je souhaite que vous soyez prudents.", "Je souhaite que vous soyez là.", "Je souhaite que vous soyez présents.",
+                                "Pourvu que tu sois content.", "Pourvu que tu sois heureux.", "Pourvu que tu sois prudent.", "Pourvu que tu sois là.", "Pourvu que tu sois présent.",
+                                "Pourvu que nous soyons contents.", "Pourvu que nous soyons heureux.", "Pourvu que nous soyons heureuses.", "Pourvu que nous soyons prudents.", "Pourvu que nous soyons là.", "Pourvu que nous soyons présents.",
+                                "Pourvu que il soit content.", "Pourvu que il soit heureux.", "Pourvu que il soit prudent.", "Pourvu que il soit là.", "Pourvu que il soit présent.",
+                                "Pourvu que vous soyez contents.", "Pourvu que vous soyez heureux.", "Pourvu que vous soyez heureuses.", "Pourvu que vous soyez prudents.", "Pourvu que vous soyez là.", "Pourvu que vous soyez présents."
+                            ],
+                            hint: "Attention à l'accord sujet-verbe et adjectif !"
+                        },
+                        { 
+                            columns: [
+                                ["Il faut que", "Je souhaite que", "Pourvu que", "Je doute que"],
+                                ["tu", "nous", "il", "vous"],
+                                ["aies", "ayons", "ait", "ayez"],
+                                ["du courage.", "de la patience.", "raison.", "tort.", "confiance.", "le temps."]
+                            ],
+                            validCombinations: [
+                                "Il faut que tu aies du courage.", "Il faut que tu aies de la patience.", "Il faut que tu aies raison.", "Il faut que tu aies tort.", "Il faut que tu aies confiance.", "Il faut que tu aies le temps.",
+                                "Il faut que nous ayons du courage.", "Il faut que nous ayons de la patience.", "Il faut que nous ayons raison.", "Il faut que nous ayons tort.", "Il faut que nous ayons confiance.", "Il faut que nous ayons le temps.",
+                                "Il faut que il ait du courage.", "Il faut que il ait de la patience.", "Il faut que il ait raison.", "Il faut que il ait tort.", "Il faut que il ait confiance.", "Il faut que il ait le temps.",
+                                "Il faut que vous ayez du courage.", "Il faut que vous ayez de la patience.", "Il faut que vous ayez raison.", "Il faut que vous ayez tort.", "Il faut que vous ayez confiance.", "Il faut que vous ayez le temps.",
+                                "Je souhaite que tu aies du courage.", "Je souhaite que tu aies de la patience.", "Je souhaite que tu aies raison.", "Je souhaite que tu aies tort.", "Je souhaite que tu aies confiance.", "Je souhaite que tu aies le temps.",
+                                "Je souhaite que nous ayons du courage.", "Je souhaite que nous ayons de la patience.", "Je souhaite que nous ayons raison.", "Je souhaite que nous ayons tort.", "Je souhaite que nous ayons confiance.", "Je souhaite que nous ayons le temps.",
+                                "Je souhaite que il ait du courage.", "Je souhaite que il ait de la patience.", "Je souhaite que il ait raison.", "Je souhaite que il ait tort.", "Je souhaite que il ait confiance.", "Je souhaite que il ait le temps.",
+                                "Je souhaite que vous ayez du courage.", "Je souhaite que vous ayez de la patience.", "Je souhaite que vous ayez raison.", "Je souhaite que vous ayez tort.", "Je souhaite que vous ayez confiance.", "Je souhaite que vous ayez le temps.",
+                                "Pourvu que tu aies du courage.", "Pourvu que tu aies de la patience.", "Pourvu que tu aies raison.", "Pourvu que tu aies tort.", "Pourvu que tu aies confiance.", "Pourvu que tu aies le temps.",
+                                "Pourvu que nous ayons du courage.", "Pourvu que nous ayons de la patience.", "Pourvu que nous ayons raison.", "Pourvu que nous ayons tort.", "Pourvu que nous ayons confiance.", "Pourvu que nous ayons le temps.",
+                                "Pourvu que il ait du courage.", "Pourvu que il ait de la patience.", "Pourvu que il ait raison.", "Pourvu que il ait tort.", "Pourvu que il ait confiance.", "Pourvu que il ait le temps.",
+                                "Pourvu que vous ayez du courage.", "Pourvu que vous ayez de la patience.", "Pourvu que vous ayez raison.", "Pourvu que vous ayez tort.", "Pourvu que vous ayez confiance.", "Pourvu que vous ayez le temps.",
+                                "Je doute que tu aies du courage.", "Je doute que tu aies de la patience.", "Je doute que tu aies raison.", "Je doute que tu aies tort.", "Je doute que tu aies confiance.", "Je doute que tu aies le temps.",
+                                "Je doute que nous ayons du courage.", "Je doute que nous ayons de la patience.", "Je doute que nous ayons raison.", "Je doute que nous ayons tort.", "Je doute que nous ayons confiance.", "Je doute que nous ayons le temps.",
+                                "Je doute que il ait du courage.", "Je doute que il ait de la patience.", "Je doute que il ait raison.", "Je doute que il ait tort.", "Je doute que il ait confiance.", "Je doute que il ait le temps.",
+                                "Je doute que vous ayez du courage.", "Je doute que vous ayez de la patience.", "Je doute que vous ayez raison.", "Je doute que vous ayez tort.", "Je doute que vous ayez confiance.", "Je doute que vous ayez le temps."
+                            ],
+                            hint: "AVOIR + nom ou expression !"
+                        },
+                        { 
+                            columns: [
+                                ["Je veux que", "Il faut que", "Il est important que", "Pourvu que"],
+                                ["tu", "nous", "il", "vous"],
+                                ["ailles", "allions", "aille", "alliez"],
+                                ["bien.", "mieux.", "mal.", "à Paris.", "en France.", "au marché.", "chez le médecin."]
+                            ],
+                            validCombinations: [
+                                "Je veux que tu ailles bien.", "Je veux que tu ailles mieux.", "Je veux que tu ailles mal.", "Je veux que tu ailles à Paris.", "Je veux que tu ailles en France.", "Je veux que tu ailles au marché.", "Je veux que tu ailles chez le médecin.",
+                                "Je veux que nous allions bien.", "Je veux que nous allions mieux.", "Je veux que nous allions mal.", "Je veux que nous allions à Paris.", "Je veux que nous allions en France.", "Je veux que nous allions au marché.", "Je veux que nous allions chez le médecin.",
+                                "Je veux que il aille bien.", "Je veux que il aille mieux.", "Je veux que il aille mal.", "Je veux que il aille à Paris.", "Je veux que il aille en France.", "Je veux que il aille au marché.", "Je veux que il aille chez le médecin.",
+                                "Je veux que vous alliez bien.", "Je veux que vous alliez mieux.", "Je veux que vous alliez mal.", "Je veux que vous alliez à Paris.", "Je veux que vous alliez en France.", "Je veux que vous alliez au marché.", "Je veux que vous alliez chez le médecin.",
+                                "Il faut que tu ailles bien.", "Il faut que tu ailles mieux.", "Il faut que tu ailles mal.", "Il faut que tu ailles à Paris.", "Il faut que tu ailles en France.", "Il faut que tu ailles au marché.", "Il faut que tu ailles chez le médecin.",
+                                "Il faut que nous allions bien.", "Il faut que nous allions mieux.", "Il faut que nous allions mal.", "Il faut que nous allions à Paris.", "Il faut que nous allions en France.", "Il faut que nous allions au marché.", "Il faut que nous allions chez le médecin.",
+                                "Il faut que il aille bien.", "Il faut que il aille mieux.", "Il faut que il aille mal.", "Il faut que il aille à Paris.", "Il faut que il aille en France.", "Il faut que il aille au marché.", "Il faut que il aille chez le médecin.",
+                                "Il faut que vous alliez bien.", "Il faut que vous alliez mieux.", "Il faut que vous alliez mal.", "Il faut que vous alliez à Paris.", "Il faut que vous alliez en France.", "Il faut que vous alliez au marché.", "Il faut que vous alliez chez le médecin.",
+                                "Il est important que tu ailles bien.", "Il est important que tu ailles mieux.", "Il est important que tu ailles mal.", "Il est important que tu ailles à Paris.", "Il est important que tu ailles en France.", "Il est important que tu ailles au marché.", "Il est important que tu ailles chez le médecin.",
+                                "Il est important que nous allions bien.", "Il est important que nous allions mieux.", "Il est important que nous allions mal.", "Il est important que nous allions à Paris.", "Il est important que nous allions en France.", "Il est important que nous allions au marché.", "Il est important que nous allions chez le médecin.",
+                                "Il est important que il aille bien.", "Il est important que il aille mieux.", "Il est important que il aille mal.", "Il est important que il aille à Paris.", "Il est important que il aille en France.", "Il est important que il aille au marché.", "Il est important que il aille chez le médecin.",
+                                "Il est important que vous alliez bien.", "Il est important que vous alliez mieux.", "Il est important que vous alliez mal.", "Il est important que vous alliez à Paris.", "Il est important que vous alliez en France.", "Il est important que vous alliez au marché.", "Il est important que vous alliez chez le médecin.",
+                                "Pourvu que tu ailles bien.", "Pourvu que tu ailles mieux.", "Pourvu que tu ailles mal.", "Pourvu que tu ailles à Paris.", "Pourvu que tu ailles en France.", "Pourvu que tu ailles au marché.", "Pourvu que tu ailles chez le médecin.",
+                                "Pourvu que nous allions bien.", "Pourvu que nous allions mieux.", "Pourvu que nous allions mal.", "Pourvu que nous allions à Paris.", "Pourvu que nous allions en France.", "Pourvu que nous allions au marché.", "Pourvu que nous allions chez le médecin.",
+                                "Pourvu que il aille bien.", "Pourvu que il aille mieux.", "Pourvu que il aille mal.", "Pourvu que il aille à Paris.", "Pourvu que il aille en France.", "Pourvu que il aille au marché.", "Pourvu que il aille chez le médecin.",
+                                "Pourvu que vous alliez bien.", "Pourvu que vous alliez mieux.", "Pourvu que vous alliez mal.", "Pourvu que vous alliez à Paris.", "Pourvu que vous alliez en France.", "Pourvu que vous alliez au marché.", "Pourvu que vous alliez chez le médecin."
+                            ],
+                            hint: "ALLER + bien/mal ou + lieu !"
+                        },
+                        { 
+                            columns: [
+                                ["Il faut que", "Je veux que", "Pourvu que", "J'ai peur que"],
+                                ["tu", "nous", "il", "vous"],
+                                ["fasses", "fassions", "fasse", "fassiez"],
+                                ["attention.", "tes devoirs.", "un effort.", "beau.", "froid.", "du sport.", "la cuisine.", "les courses."]
+                            ],
+                            validCombinations: [
+                                "Il faut que tu fasses attention.", "Il faut que tu fasses tes devoirs.", "Il faut que tu fasses un effort.", "Il faut que tu fasses beau.", "Il faut que tu fasses froid.", "Il faut que tu fasses du sport.", "Il faut que tu fasses la cuisine.", "Il faut que tu fasses les courses.",
+                                "Il faut que nous fassions attention.", "Il faut que nous fassions tes devoirs.", "Il faut que nous fassions un effort.", "Il faut que nous fassions beau.", "Il faut que nous fassions froid.", "Il faut que nous fassions du sport.", "Il faut que nous fassions la cuisine.", "Il faut que nous fassions les courses.",
+                                "Il faut que il fasse attention.", "Il faut que il fasse tes devoirs.", "Il faut que il fasse un effort.", "Il faut que il fasse beau.", "Il faut que il fasse froid.", "Il faut que il fasse du sport.", "Il faut que il fasse la cuisine.", "Il faut que il fasse les courses.",
+                                "Il faut que vous fassiez attention.", "Il faut que vous fassiez tes devoirs.", "Il faut que vous fassiez un effort.", "Il faut que vous fassiez beau.", "Il faut que vous fassiez froid.", "Il faut que vous fassiez du sport.", "Il faut que vous fassiez la cuisine.", "Il faut que vous fassiez les courses.",
+                                "Je veux que tu fasses attention.", "Je veux que tu fasses tes devoirs.", "Je veux que tu fasses un effort.", "Je veux que tu fasses beau.", "Je veux que tu fasses froid.", "Je veux que tu fasses du sport.", "Je veux que tu fasses la cuisine.", "Je veux que tu fasses les courses.",
+                                "Je veux que nous fassions attention.", "Je veux que nous fassions tes devoirs.", "Je veux que nous fassions un effort.", "Je veux que nous fassions beau.", "Je veux que nous fassions froid.", "Je veux que nous fassions du sport.", "Je veux que nous fassions la cuisine.", "Je veux que nous fassions les courses.",
+                                "Je veux que il fasse attention.", "Je veux que il fasse tes devoirs.", "Je veux que il fasse un effort.", "Je veux que il fasse beau.", "Je veux que il fasse froid.", "Je veux que il fasse du sport.", "Je veux que il fasse la cuisine.", "Je veux que il fasse les courses.",
+                                "Je veux que vous fassiez attention.", "Je veux que vous fassiez tes devoirs.", "Je veux que vous fassiez un effort.", "Je veux que vous fassiez beau.", "Je veux que vous fassiez froid.", "Je veux que vous fassiez du sport.", "Je veux que vous fassiez la cuisine.", "Je veux que vous fassiez les courses.",
+                                "Pourvu que tu fasses attention.", "Pourvu que tu fasses tes devoirs.", "Pourvu que tu fasses un effort.", "Pourvu que tu fasses beau.", "Pourvu que tu fasses froid.", "Pourvu que tu fasses du sport.", "Pourvu que tu fasses la cuisine.", "Pourvu que tu fasses les courses.",
+                                "Pourvu que nous fassions attention.", "Pourvu que nous fassions tes devoirs.", "Pourvu que nous fassions un effort.", "Pourvu que nous fassions beau.", "Pourvu que nous fassions froid.", "Pourvu que nous fassions du sport.", "Pourvu que nous fassions la cuisine.", "Pourvu que nous fassions les courses.",
+                                "Pourvu que il fasse attention.", "Pourvu que il fasse tes devoirs.", "Pourvu que il fasse un effort.", "Pourvu que il fasse beau.", "Pourvu que il fasse froid.", "Pourvu que il fasse du sport.", "Pourvu que il fasse la cuisine.", "Pourvu que il fasse les courses.",
+                                "Pourvu que vous fassiez attention.", "Pourvu que vous fassiez tes devoirs.", "Pourvu que vous fassiez un effort.", "Pourvu que vous fassiez beau.", "Pourvu que vous fassiez froid.", "Pourvu que vous fassiez du sport.", "Pourvu que vous fassiez la cuisine.", "Pourvu que vous fassiez les courses.",
+                                "J'ai peur que tu fasses attention.", "J'ai peur que tu fasses tes devoirs.", "J'ai peur que tu fasses un effort.", "J'ai peur que tu fasses beau.", "J'ai peur que tu fasses froid.", "J'ai peur que tu fasses du sport.", "J'ai peur que tu fasses la cuisine.", "J'ai peur que tu fasses les courses.",
+                                "J'ai peur que nous fassions attention.", "J'ai peur que nous fassions tes devoirs.", "J'ai peur que nous fassions un effort.", "J'ai peur que nous fassions beau.", "J'ai peur que nous fassions froid.", "J'ai peur que nous fassions du sport.", "J'ai peur que nous fassions la cuisine.", "J'ai peur que nous fassions les courses.",
+                                "J'ai peur que il fasse attention.", "J'ai peur que il fasse tes devoirs.", "J'ai peur que il fasse un effort.", "J'ai peur que il fasse beau.", "J'ai peur que il fasse froid.", "J'ai peur que il fasse du sport.", "J'ai peur que il fasse la cuisine.", "J'ai peur que il fasse les courses.",
+                                "J'ai peur que vous fassiez attention.", "J'ai peur que vous fassiez tes devoirs.", "J'ai peur que vous fassiez un effort.", "J'ai peur que vous fassiez beau.", "J'ai peur que vous fassiez froid.", "J'ai peur que vous fassiez du sport.", "J'ai peur que vous fassiez la cuisine.", "J'ai peur que vous fassiez les courses."
+                            ],
+                            hint: "FAIRE + action ou météo !"
+                        },
+                        { 
+                            columns: [
+                                ["Je doute que", "Il se peut que", "Pourvu que", "Il est possible que"],
+                                ["tu", "nous", "il", "vous"],
+                                ["puisses", "puissions", "puisse", "puissiez"],
+                                ["venir.", "partir.", "réussir.", "comprendre.", "aider.", "finir à temps.", "m'accompagner.", "dormir."]
+                            ],
+                            validCombinations: [
+                                "Je doute que tu puisses venir.", "Je doute que tu puisses partir.", "Je doute que tu puisses réussir.", "Je doute que tu puisses comprendre.", "Je doute que tu puisses aider.", "Je doute que tu puisses finir à temps.", "Je doute que tu puisses m'accompagner.", "Je doute que tu puisses dormir.",
+                                "Je doute que nous puissions venir.", "Je doute que nous puissions partir.", "Je doute que nous puissions réussir.", "Je doute que nous puissions comprendre.", "Je doute que nous puissions aider.", "Je doute que nous puissions finir à temps.", "Je doute que nous puissions m'accompagner.", "Je doute que nous puissions dormir.",
+                                "Je doute que il puisse venir.", "Je doute que il puisse partir.", "Je doute que il puisse réussir.", "Je doute que il puisse comprendre.", "Je doute que il puisse aider.", "Je doute que il puisse finir à temps.", "Je doute que il puisse m'accompagner.", "Je doute que il puisse dormir.",
+                                "Je doute que vous puissiez venir.", "Je doute que vous puissiez partir.", "Je doute que vous puissiez réussir.", "Je doute que vous puissiez comprendre.", "Je doute que vous puissiez aider.", "Je doute que vous puissiez finir à temps.", "Je doute que vous puissiez m'accompagner.", "Je doute que vous puissiez dormir.",
+                                "Il se peut que tu puisses venir.", "Il se peut que tu puisses partir.", "Il se peut que tu puisses réussir.", "Il se peut que tu puisses comprendre.", "Il se peut que tu puisses aider.", "Il se peut que tu puisses finir à temps.", "Il se peut que tu puisses m'accompagner.", "Il se peut que tu puisses dormir.",
+                                "Il se peut que nous puissions venir.", "Il se peut que nous puissions partir.", "Il se peut que nous puissions réussir.", "Il se peut que nous puissions comprendre.", "Il se peut que nous puissions aider.", "Il se peut que nous puissions finir à temps.", "Il se peut que nous puissions m'accompagner.", "Il se peut que nous puissions dormir.",
+                                "Il se peut que il puisse venir.", "Il se peut que il puisse partir.", "Il se peut que il puisse réussir.", "Il se peut que il puisse comprendre.", "Il se peut que il puisse aider.", "Il se peut que il puisse finir à temps.", "Il se peut que il puisse m'accompagner.", "Il se peut que il puisse dormir.",
+                                "Il se peut que vous puissiez venir.", "Il se peut que vous puissiez partir.", "Il se peut que vous puissiez réussir.", "Il se peut que vous puissiez comprendre.", "Il se peut que vous puissiez aider.", "Il se peut que vous puissiez finir à temps.", "Il se peut que vous puissiez m'accompagner.", "Il se peut que vous puissiez dormir.",
+                                "Pourvu que tu puisses venir.", "Pourvu que tu puisses partir.", "Pourvu que tu puisses réussir.", "Pourvu que tu puisses comprendre.", "Pourvu que tu puisses aider.", "Pourvu que tu puisses finir à temps.", "Pourvu que tu puisses m'accompagner.", "Pourvu que tu puisses dormir.",
+                                "Pourvu que nous puissions venir.", "Pourvu que nous puissions partir.", "Pourvu que nous puissions réussir.", "Pourvu que nous puissions comprendre.", "Pourvu que nous puissions aider.", "Pourvu que nous puissions finir à temps.", "Pourvu que nous puissions m'accompagner.", "Pourvu que nous puissions dormir.",
+                                "Pourvu que il puisse venir.", "Pourvu que il puisse partir.", "Pourvu que il puisse réussir.", "Pourvu que il puisse comprendre.", "Pourvu que il puisse aider.", "Pourvu que il puisse finir à temps.", "Pourvu que il puisse m'accompagner.", "Pourvu que il puisse dormir.",
+                                "Pourvu que vous puissiez venir.", "Pourvu que vous puissiez partir.", "Pourvu que vous puissiez réussir.", "Pourvu que vous puissiez comprendre.", "Pourvu que vous puissiez aider.", "Pourvu que vous puissiez finir à temps.", "Pourvu que vous puissiez m'accompagner.", "Pourvu que vous puissiez dormir.",
+                                "Il est possible que tu puisses venir.", "Il est possible que tu puisses partir.", "Il est possible que tu puisses réussir.", "Il est possible que tu puisses comprendre.", "Il est possible que tu puisses aider.", "Il est possible que tu puisses finir à temps.", "Il est possible que tu puisses m'accompagner.", "Il est possible que tu puisses dormir.",
+                                "Il est possible que nous puissions venir.", "Il est possible que nous puissions partir.", "Il est possible que nous puissions réussir.", "Il est possible que nous puissions comprendre.", "Il est possible que nous puissions aider.", "Il est possible que nous puissions finir à temps.", "Il est possible que nous puissions m'accompagner.", "Il est possible que nous puissions dormir.",
+                                "Il est possible que il puisse venir.", "Il est possible que il puisse partir.", "Il est possible que il puisse réussir.", "Il est possible que il puisse comprendre.", "Il est possible que il puisse aider.", "Il est possible que il puisse finir à temps.", "Il est possible que il puisse m'accompagner.", "Il est possible que il puisse dormir.",
+                                "Il est possible que vous puissiez venir.", "Il est possible que vous puissiez partir.", "Il est possible que vous puissiez réussir.", "Il est possible que vous puissiez comprendre.", "Il est possible que vous puissiez aider.", "Il est possible que vous puissiez finir à temps.", "Il est possible que vous puissiez m'accompagner.", "Il est possible que vous puissiez dormir."
+                            ],
+                            hint: "POUVOIR + verbe infinitif !"
+                        },
+                        { 
+                            columns: [
+                                ["Il faut que", "Je veux que", "Il est important que", "Je doute que"],
+                                ["tu", "nous", "il", "vous"],
+                                ["saches", "sachions", "sache", "sachiez"],
+                                ["la vérité.", "la réponse.", "parler français.", "nager.", "conduire.", "cela.", "cuisiner.", "danser."]
+                            ],
+                            validCombinations: [
+                                "Il faut que tu saches la vérité.", "Il faut que tu saches la réponse.", "Il faut que tu saches parler français.", "Il faut que tu saches nager.", "Il faut que tu saches conduire.", "Il faut que tu saches cela.", "Il faut que tu saches cuisiner.", "Il faut que tu saches danser.",
+                                "Il faut que nous sachions la vérité.", "Il faut que nous sachions la réponse.", "Il faut que nous sachions parler français.", "Il faut que nous sachions nager.", "Il faut que nous sachions conduire.", "Il faut que nous sachions cela.", "Il faut que nous sachions cuisiner.", "Il faut que nous sachions danser.",
+                                "Il faut que il sache la vérité.", "Il faut que il sache la réponse.", "Il faut que il sache parler français.", "Il faut que il sache nager.", "Il faut que il sache conduire.", "Il faut que il sache cela.", "Il faut que il sache cuisiner.", "Il faut que il sache danser.",
+                                "Il faut que vous sachiez la vérité.", "Il faut que vous sachiez la réponse.", "Il faut que vous sachiez parler français.", "Il faut que vous sachiez nager.", "Il faut que vous sachiez conduire.", "Il faut que vous sachiez cela.", "Il faut que vous sachiez cuisiner.", "Il faut que vous sachiez danser.",
+                                "Je veux que tu saches la vérité.", "Je veux que tu saches la réponse.", "Je veux que tu saches parler français.", "Je veux que tu saches nager.", "Je veux que tu saches conduire.", "Je veux que tu saches cela.", "Je veux que tu saches cuisiner.", "Je veux que tu saches danser.",
+                                "Je veux que nous sachions la vérité.", "Je veux que nous sachions la réponse.", "Je veux que nous sachions parler français.", "Je veux que nous sachions nager.", "Je veux que nous sachions conduire.", "Je veux que nous sachions cela.", "Je veux que nous sachions cuisiner.", "Je veux que nous sachions danser.",
+                                "Je veux que il sache la vérité.", "Je veux que il sache la réponse.", "Je veux que il sache parler français.", "Je veux que il sache nager.", "Je veux que il sache conduire.", "Je veux que il sache cela.", "Je veux que il sache cuisiner.", "Je veux que il sache danser.",
+                                "Je veux que vous sachiez la vérité.", "Je veux que vous sachiez la réponse.", "Je veux que vous sachiez parler français.", "Je veux que vous sachiez nager.", "Je veux que vous sachiez conduire.", "Je veux que vous sachiez cela.", "Je veux que vous sachiez cuisiner.", "Je veux que vous sachiez danser.",
+                                "Il est important que tu saches la vérité.", "Il est important que tu saches la réponse.", "Il est important que tu saches parler français.", "Il est important que tu saches nager.", "Il est important que tu saches conduire.", "Il est important que tu saches cela.", "Il est important que tu saches cuisiner.", "Il est important que tu saches danser.",
+                                "Il est important que nous sachions la vérité.", "Il est important que nous sachions la réponse.", "Il est important que nous sachions parler français.", "Il est important que nous sachions nager.", "Il est important que nous sachions conduire.", "Il est important que nous sachions cela.", "Il est important que nous sachions cuisiner.", "Il est important que nous sachions danser.",
+                                "Il est important que il sache la vérité.", "Il est important que il sache la réponse.", "Il est important que il sache parler français.", "Il est important que il sache nager.", "Il est important que il sache conduire.", "Il est important que il sache cela.", "Il est important que il sache cuisiner.", "Il est important que il sache danser.",
+                                "Il est important que vous sachiez la vérité.", "Il est important que vous sachiez la réponse.", "Il est important que vous sachiez parler français.", "Il est important que vous sachiez nager.", "Il est important que vous sachiez conduire.", "Il est important que vous sachiez cela.", "Il est important que vous sachiez cuisiner.", "Il est important que vous sachiez danser.",
+                                "Je doute que tu saches la vérité.", "Je doute que tu saches la réponse.", "Je doute que tu saches parler français.", "Je doute que tu saches nager.", "Je doute que tu saches conduire.", "Je doute que tu saches cela.", "Je doute que tu saches cuisiner.", "Je doute que tu saches danser.",
+                                "Je doute que nous sachions la vérité.", "Je doute que nous sachions la réponse.", "Je doute que nous sachions parler français.", "Je doute que nous sachions nager.", "Je doute que nous sachions conduire.", "Je doute que nous sachions cela.", "Je doute que nous sachions cuisiner.", "Je doute que nous sachions danser.",
+                                "Je doute que il sache la vérité.", "Je doute que il sache la réponse.", "Je doute que il sache parler français.", "Je doute que il sache nager.", "Je doute que il sache conduire.", "Je doute que il sache cela.", "Je doute que il sache cuisiner.", "Je doute que il sache danser.",
+                                "Je doute que vous sachiez la vérité.", "Je doute que vous sachiez la réponse.", "Je doute que vous sachiez parler français.", "Je doute que vous sachiez nager.", "Je doute que vous sachiez conduire.", "Je doute que vous sachiez cela.", "Je doute que vous sachiez cuisiner.", "Je doute que vous sachiez danser."
+                            ],
+                            hint: "SAVOIR + complément ou infinitif !"
+                        },
+                        { 
+                            columns: [
+                                ["Je ne crois pas que", "Je doute que", "Il se peut que", "Pourvu que"],
+                                ["tu", "nous", "il", "vous"],
+                                ["veuilles", "voulions", "veuille", "vouliez"],
+                                ["partir.", "rester.", "venir.", "m'aider.", "répondre.", "accepter.", "travailler.", "jouer."]
+                            ],
+                            validCombinations: [
+                                "Je ne crois pas que tu veuilles partir.", "Je ne crois pas que tu veuilles rester.", "Je ne crois pas que tu veuilles venir.", "Je ne crois pas que tu veuilles m'aider.", "Je ne crois pas que tu veuilles répondre.", "Je ne crois pas que tu veuilles accepter.", "Je ne crois pas que tu veuilles travailler.", "Je ne crois pas que tu veuilles jouer.",
+                                "Je ne crois pas que nous voulions partir.", "Je ne crois pas que nous voulions rester.", "Je ne crois pas que nous voulions venir.", "Je ne crois pas que nous voulions m'aider.", "Je ne crois pas que nous voulions répondre.", "Je ne crois pas que nous voulions accepter.", "Je ne crois pas que nous voulions travailler.", "Je ne crois pas que nous voulions jouer.",
+                                "Je ne crois pas que il veuille partir.", "Je ne crois pas que il veuille rester.", "Je ne crois pas que il veuille venir.", "Je ne crois pas que il veuille m'aider.", "Je ne crois pas que il veuille répondre.", "Je ne crois pas que il veuille accepter.", "Je ne crois pas que il veuille travailler.", "Je ne crois pas que il veuille jouer.",
+                                "Je ne crois pas que vous vouliez partir.", "Je ne crois pas que vous vouliez rester.", "Je ne crois pas que vous vouliez venir.", "Je ne crois pas que vous vouliez m'aider.", "Je ne crois pas que vous vouliez répondre.", "Je ne crois pas que vous vouliez accepter.", "Je ne crois pas que vous vouliez travailler.", "Je ne crois pas que vous vouliez jouer.",
+                                "Je doute que tu veuilles partir.", "Je doute que tu veuilles rester.", "Je doute que tu veuilles venir.", "Je doute que tu veuilles m'aider.", "Je doute que tu veuilles répondre.", "Je doute que tu veuilles accepter.", "Je doute que tu veuilles travailler.", "Je doute que tu veuilles jouer.",
+                                "Je doute que nous voulions partir.", "Je doute que nous voulions rester.", "Je doute que nous voulions venir.", "Je doute que nous voulions m'aider.", "Je doute que nous voulions répondre.", "Je doute que nous voulions accepter.", "Je doute que nous voulions travailler.", "Je doute que nous voulions jouer.",
+                                "Je doute que il veuille partir.", "Je doute que il veuille rester.", "Je doute que il veuille venir.", "Je doute que il veuille m'aider.", "Je doute que il veuille répondre.", "Je doute que il veuille accepter.", "Je doute que il veuille travailler.", "Je doute que il veuille jouer.",
+                                "Je doute que vous vouliez partir.", "Je doute que vous vouliez rester.", "Je doute que vous vouliez venir.", "Je doute que vous vouliez m'aider.", "Je doute que vous vouliez répondre.", "Je doute que vous vouliez accepter.", "Je doute que vous vouliez travailler.", "Je doute que vous vouliez jouer.",
+                                "Il se peut que tu veuilles partir.", "Il se peut que tu veuilles rester.", "Il se peut que tu veuilles venir.", "Il se peut que tu veuilles m'aider.", "Il se peut que tu veuilles répondre.", "Il se peut que tu veuilles accepter.", "Il se peut que tu veuilles travailler.", "Il se peut que tu veuilles jouer.",
+                                "Il se peut que nous voulions partir.", "Il se peut que nous voulions rester.", "Il se peut que nous voulions venir.", "Il se peut que nous voulions m'aider.", "Il se peut que nous voulions répondre.", "Il se peut que nous voulions accepter.", "Il se peut que nous voulions travailler.", "Il se peut que nous voulions jouer.",
+                                "Il se peut que il veuille partir.", "Il se peut que il veuille rester.", "Il se peut que il veuille venir.", "Il se peut que il veuille m'aider.", "Il se peut que il veuille répondre.", "Il se peut que il veuille accepter.", "Il se peut que il veuille travailler.", "Il se peut que il veuille jouer.",
+                                "Il se peut que vous vouliez partir.", "Il se peut que vous vouliez rester.", "Il se peut que vous vouliez venir.", "Il se peut que vous vouliez m'aider.", "Il se peut que vous vouliez répondre.", "Il se peut que vous vouliez accepter.", "Il se peut que vous vouliez travailler.", "Il se peut que vous vouliez jouer.",
+                                "Pourvu que tu veuilles partir.", "Pourvu que tu veuilles rester.", "Pourvu que tu veuilles venir.", "Pourvu que tu veuilles m'aider.", "Pourvu que tu veuilles répondre.", "Pourvu que tu veuilles accepter.", "Pourvu que tu veuilles travailler.", "Pourvu que tu veuilles jouer.",
+                                "Pourvu que nous voulions partir.", "Pourvu que nous voulions rester.", "Pourvu que nous voulions venir.", "Pourvu que nous voulions m'aider.", "Pourvu que nous voulions répondre.", "Pourvu que nous voulions accepter.", "Pourvu que nous voulions travailler.", "Pourvu que nous voulions jouer.",
+                                "Pourvu que il veuille partir.", "Pourvu que il veuille rester.", "Pourvu que il veuille venir.", "Pourvu que il veuille m'aider.", "Pourvu que il veuille répondre.", "Pourvu que il veuille accepter.", "Pourvu que il veuille travailler.", "Pourvu que il veuille jouer.",
+                                "Pourvu que vous vouliez partir.", "Pourvu que vous vouliez rester.", "Pourvu que vous vouliez venir.", "Pourvu que vous vouliez m'aider.", "Pourvu que vous vouliez répondre.", "Pourvu que vous vouliez accepter.", "Pourvu que vous vouliez travailler.", "Pourvu que vous vouliez jouer."
+                            ],
+                            hint: "VOULOIR + infinitif !"
+                        },
+                        { 
+                            columns: [
+                                ["Il faut que", "Je veux que", "Bien que", "Je suis content que"],
+                                ["tu", "nous", "il", "vous"],
+                                ["sois", "soyons", "soit", "soyez", "aies", "ayons", "ait", "ayez"],
+                                ["patient.", "patients.", "calme.", "calmes.", "confiance.", "raison.", "tort.", "du temps.", "de la chance."]
+                            ],
+                            validCombinations: [
+                                "Il faut que tu sois patient.", "Il faut que tu sois calme.", "Il faut que tu aies confiance.", "Il faut que tu aies raison.", "Il faut que tu aies tort.", "Il faut que tu aies du temps.", "Il faut que tu aies de la chance.",
+                                "Il faut que nous soyons patients.", "Il faut que nous soyons calme.", "Il faut que nous soyons calmes.", "Il faut que nous ayons confiance.", "Il faut que nous ayons raison.", "Il faut que nous ayons tort.", "Il faut que nous ayons du temps.", "Il faut que nous ayons de la chance.",
+                                "Il faut que il soit patient.", "Il faut que il soit calme.", "Il faut que il ait confiance.", "Il faut que il ait raison.", "Il faut que il ait tort.", "Il faut que il ait du temps.", "Il faut que il ait de la chance.",
+                                "Il faut que vous soyez patients.", "Il faut que vous soyez calme.", "Il faut que vous soyez calmes.", "Il faut que vous ayez confiance.", "Il faut que vous ayez raison.", "Il faut que vous ayez tort.", "Il faut que vous ayez du temps.", "Il faut que vous ayez de la chance.",
+                                "Je veux que tu sois patient.", "Je veux que tu sois calme.", "Je veux que tu aies confiance.", "Je veux que tu aies raison.", "Je veux que tu aies tort.", "Je veux que tu aies du temps.", "Je veux que tu aies de la chance.",
+                                "Je veux que nous soyons patients.", "Je veux que nous soyons calme.", "Je veux que nous soyons calmes.", "Je veux que nous ayons confiance.", "Je veux que nous ayons raison.", "Je veux que nous ayons tort.", "Je veux que nous ayons du temps.", "Je veux que nous ayons de la chance.",
+                                "Je veux que il soit patient.", "Je veux que il soit calme.", "Je veux que il ait confiance.", "Je veux que il ait raison.", "Je veux que il ait tort.", "Je veux que il ait du temps.", "Je veux que il ait de la chance.",
+                                "Je veux que vous soyez patients.", "Je veux que vous soyez calme.", "Je veux que vous soyez calmes.", "Je veux que vous ayez confiance.", "Je veux que vous ayez raison.", "Je veux que vous ayez tort.", "Je veux que vous ayez du temps.", "Je veux que vous ayez de la chance.",
+                                "Bien que tu sois patient.", "Bien que tu sois calme.", "Bien que tu aies confiance.", "Bien que tu aies raison.", "Bien que tu aies tort.", "Bien que tu aies du temps.", "Bien que tu aies de la chance.",
+                                "Bien que nous soyons patients.", "Bien que nous soyons calme.", "Bien que nous soyons calmes.", "Bien que nous ayons confiance.", "Bien que nous ayons raison.", "Bien que nous ayons tort.", "Bien que nous ayons du temps.", "Bien que nous ayons de la chance.",
+                                "Bien que il soit patient.", "Bien que il soit calme.", "Bien que il ait confiance.", "Bien que il ait raison.", "Bien que il ait tort.", "Bien que il ait du temps.", "Bien que il ait de la chance.",
+                                "Bien que vous soyez patients.", "Bien que vous soyez calme.", "Bien que vous soyez calmes.", "Bien que vous ayez confiance.", "Bien que vous ayez raison.", "Bien que vous ayez tort.", "Bien que vous ayez du temps.", "Bien que vous ayez de la chance.",
+                                "Je suis content que tu sois patient.", "Je suis content que tu sois calme.", "Je suis content que tu aies confiance.", "Je suis content que tu aies raison.", "Je suis content que tu aies tort.", "Je suis content que tu aies du temps.", "Je suis content que tu aies de la chance.",
+                                "Je suis content que nous soyons patients.", "Je suis content que nous soyons calme.", "Je suis content que nous soyons calmes.", "Je suis content que nous ayons confiance.", "Je suis content que nous ayons raison.", "Je suis content que nous ayons tort.", "Je suis content que nous ayons du temps.", "Je suis content que nous ayons de la chance.",
+                                "Je suis content que il soit patient.", "Je suis content que il soit calme.", "Je suis content que il ait confiance.", "Je suis content que il ait raison.", "Je suis content que il ait tort.", "Je suis content que il ait du temps.", "Je suis content que il ait de la chance.",
+                                "Je suis content que vous soyez patients.", "Je suis content que vous soyez calme.", "Je suis content que vous soyez calmes.", "Je suis content que vous ayez confiance.", "Je suis content que vous ayez raison.", "Je suis content que vous ayez tort.", "Je suis content que vous ayez du temps.", "Je suis content que vous ayez de la chance."
+                            ],
+                            hint: "ÊTRE ou AVOIR ? Choisis bien !"
+                        },
+                        { 
+                            columns: [
+                                ["Il faut que", "Pourvu que", "Il est nécessaire que", "Je veux que"],
+                                ["tu", "nous", "il", "vous"],
+                                ["ailles", "allions", "aille", "alliez", "fasses", "fassions", "fasse", "fassiez"],
+                                ["bien.", "mieux.", "en ville.", "attention.", "tes devoirs.", "du sport.", "la vaisselle.", "les courses."]
+                            ],
+                            validCombinations: [
+                                "Il faut que tu ailles bien.", "Il faut que tu ailles mieux.", "Il faut que tu ailles en ville.", "Il faut que tu fasses attention.", "Il faut que tu fasses tes devoirs.", "Il faut que tu fasses du sport.", "Il faut que tu fasses la vaisselle.", "Il faut que tu fasses les courses.",
+                                "Il faut que nous allions bien.", "Il faut que nous allions mieux.", "Il faut que nous allions en ville.", "Il faut que nous fassions attention.", "Il faut que nous fassions tes devoirs.", "Il faut que nous fassions du sport.", "Il faut que nous fassions la vaisselle.", "Il faut que nous fassions les courses.",
+                                "Il faut que il aille bien.", "Il faut que il aille mieux.", "Il faut que il aille en ville.", "Il faut que il fasse attention.", "Il faut que il fasse tes devoirs.", "Il faut que il fasse du sport.", "Il faut que il fasse la vaisselle.", "Il faut que il fasse les courses.",
+                                "Il faut que vous alliez bien.", "Il faut que vous alliez mieux.", "Il faut que vous alliez en ville.", "Il faut que vous fassiez attention.", "Il faut que vous fassiez tes devoirs.", "Il faut que vous fassiez du sport.", "Il faut que vous fassiez la vaisselle.", "Il faut que vous fassiez les courses.",
+                                "Pourvu que tu ailles bien.", "Pourvu que tu ailles mieux.", "Pourvu que tu ailles en ville.", "Pourvu que tu fasses attention.", "Pourvu que tu fasses tes devoirs.", "Pourvu que tu fasses du sport.", "Pourvu que tu fasses la vaisselle.", "Pourvu que tu fasses les courses.",
+                                "Pourvu que nous allions bien.", "Pourvu que nous allions mieux.", "Pourvu que nous allions en ville.", "Pourvu que nous fassions attention.", "Pourvu que nous fassions tes devoirs.", "Pourvu que nous fassions du sport.", "Pourvu que nous fassions la vaisselle.", "Pourvu que nous fassions les courses.",
+                                "Pourvu que il aille bien.", "Pourvu que il aille mieux.", "Pourvu que il aille en ville.", "Pourvu que il fasse attention.", "Pourvu que il fasse tes devoirs.", "Pourvu que il fasse du sport.", "Pourvu que il fasse la vaisselle.", "Pourvu que il fasse les courses.",
+                                "Pourvu que vous alliez bien.", "Pourvu que vous alliez mieux.", "Pourvu que vous alliez en ville.", "Pourvu que vous fassiez attention.", "Pourvu que vous fassiez tes devoirs.", "Pourvu que vous fassiez du sport.", "Pourvu que vous fassiez la vaisselle.", "Pourvu que vous fassiez les courses.",
+                                "Il est nécessaire que tu ailles bien.", "Il est nécessaire que tu ailles mieux.", "Il est nécessaire que tu ailles en ville.", "Il est nécessaire que tu fasses attention.", "Il est nécessaire que tu fasses tes devoirs.", "Il est nécessaire que tu fasses du sport.", "Il est nécessaire que tu fasses la vaisselle.", "Il est nécessaire que tu fasses les courses.",
+                                "Il est nécessaire que nous allions bien.", "Il est nécessaire que nous allions mieux.", "Il est nécessaire que nous allions en ville.", "Il est nécessaire que nous fassions attention.", "Il est nécessaire que nous fassions tes devoirs.", "Il est nécessaire que nous fassions du sport.", "Il est nécessaire que nous fassions la vaisselle.", "Il est nécessaire que nous fassions les courses.",
+                                "Il est nécessaire que il aille bien.", "Il est nécessaire que il aille mieux.", "Il est nécessaire que il aille en ville.", "Il est nécessaire que il fasse attention.", "Il est nécessaire que il fasse tes devoirs.", "Il est nécessaire que il fasse du sport.", "Il est nécessaire que il fasse la vaisselle.", "Il est nécessaire que il fasse les courses.",
+                                "Il est nécessaire que vous alliez bien.", "Il est nécessaire que vous alliez mieux.", "Il est nécessaire que vous alliez en ville.", "Il est nécessaire que vous fassiez attention.", "Il est nécessaire que vous fassiez tes devoirs.", "Il est nécessaire que vous fassiez du sport.", "Il est nécessaire que vous fassiez la vaisselle.", "Il est nécessaire que vous fassiez les courses.",
+                                "Je veux que tu ailles bien.", "Je veux que tu ailles mieux.", "Je veux que tu ailles en ville.", "Je veux que tu fasses attention.", "Je veux que tu fasses tes devoirs.", "Je veux que tu fasses du sport.", "Je veux que tu fasses la vaisselle.", "Je veux que tu fasses les courses.",
+                                "Je veux que nous allions bien.", "Je veux que nous allions mieux.", "Je veux que nous allions en ville.", "Je veux que nous fassions attention.", "Je veux que nous fassions tes devoirs.", "Je veux que nous fassions du sport.", "Je veux que nous fassions la vaisselle.", "Je veux que nous fassions les courses.",
+                                "Je veux que il aille bien.", "Je veux que il aille mieux.", "Je veux que il aille en ville.", "Je veux que il fasse attention.", "Je veux que il fasse tes devoirs.", "Je veux que il fasse du sport.", "Je veux que il fasse la vaisselle.", "Je veux que il fasse les courses.",
+                                "Je veux que vous alliez bien.", "Je veux que vous alliez mieux.", "Je veux que vous alliez en ville.", "Je veux que vous fassiez attention.", "Je veux que vous fassiez tes devoirs.", "Je veux que vous fassiez du sport.", "Je veux que vous fassiez la vaisselle.", "Je veux que vous fassiez les courses."
+                            ],
+                            hint: "ALLER ou FAIRE ? Choisis bien !"
+                        },
+                        { 
+                            columns: [
+                                ["Il faut que", "Je veux que", "Il vaut mieux que", "Je doute que", "Pourvu que"],
+                                ["tu", "nous", "il", "vous"],
+                                ["sois", "soyons", "soit", "soyez", "aies", "ayons", "ait", "ayez", "ailles", "allions", "aille", "alliez", "fasses", "fassions", "fasse", "fassiez", "puisses", "puissions", "puisse", "puissiez", "saches", "sachions", "sache", "sachiez"],
+                                ["content.", "contents.", "raison.", "confiance.", "bien.", "en ville.", "attention.", "du sport.", "venir demain.", "la vérité.", "le faire.", "comprendre.", "nager."]
+                            ],
+                            validCombinations: [
+                                "Il faut que tu sois content.", "Il faut que tu sois contents.", "Il faut que tu aies raison.", "Il faut que tu aies confiance.", "Il faut que tu ailles bien.", "Il faut que tu ailles en ville.", "Il faut que tu fasses attention.", "Il faut que tu fasses du sport.", "Il faut que tu puisses venir demain.", "Il faut que tu puisses le faire.", "Il faut que tu puisses comprendre.", "Il faut que tu puisses nager.", "Il faut que tu saches la vérité.", "Il faut que tu saches le faire.", "Il faut que tu saches comprendre.", "Il faut que tu saches nager.",
+                                "Il faut que nous soyons content.", "Il faut que nous soyons contents.", "Il faut que nous ayons raison.", "Il faut que nous ayons confiance.", "Il faut que nous allions bien.", "Il faut que nous allions en ville.", "Il faut que nous fassions attention.", "Il faut que nous fassions du sport.", "Il faut que nous puissions venir demain.", "Il faut que nous puissions le faire.", "Il faut que nous puissions comprendre.", "Il faut que nous puissions nager.", "Il faut que nous sachions la vérité.", "Il faut que nous sachions le faire.", "Il faut que nous sachions comprendre.", "Il faut que nous sachions nager.",
+                                "Il faut que il soit content.", "Il faut que il soit contents.", "Il faut que il ait raison.", "Il faut que il ait confiance.", "Il faut que il aille bien.", "Il faut que il aille en ville.", "Il faut que il fasse attention.", "Il faut que il fasse du sport.", "Il faut que il puisse venir demain.", "Il faut que il puisse le faire.", "Il faut que il puisse comprendre.", "Il faut que il puisse nager.", "Il faut que il sache la vérité.", "Il faut que il sache le faire.", "Il faut que il sache comprendre.", "Il faut que il sache nager.",
+                                "Il faut que vous soyez content.", "Il faut que vous soyez contents.", "Il faut que vous ayez raison.", "Il faut que vous ayez confiance.", "Il faut que vous alliez bien.", "Il faut que vous alliez en ville.", "Il faut que vous fassiez attention.", "Il faut que vous fassiez du sport.", "Il faut que vous puissiez venir demain.", "Il faut que vous puissiez le faire.", "Il faut que vous puissiez comprendre.", "Il faut que vous puissiez nager.", "Il faut que vous sachiez la vérité.", "Il faut que vous sachiez le faire.", "Il faut que vous sachiez comprendre.", "Il faut que vous sachiez nager.",
+                                "Je veux que tu sois content.", "Je veux que tu sois contents.", "Je veux que tu aies raison.", "Je veux que tu aies confiance.", "Je veux que tu ailles bien.", "Je veux que tu ailles en ville.", "Je veux que tu fasses attention.", "Je veux que tu fasses du sport.", "Je veux que tu puisses venir demain.", "Je veux que tu puisses le faire.", "Je veux que tu puisses comprendre.", "Je veux que tu puisses nager.", "Je veux que tu saches la vérité.", "Je veux que tu saches le faire.", "Je veux que tu saches comprendre.", "Je veux que tu saches nager.",
+                                "Je veux que nous soyons content.", "Je veux que nous soyons contents.", "Je veux que nous ayons raison.", "Je veux que nous ayons confiance.", "Je veux que nous allions bien.", "Je veux que nous allions en ville.", "Je veux que nous fassions attention.", "Je veux que nous fassions du sport.", "Je veux que nous puissions venir demain.", "Je veux que nous puissions le faire.", "Je veux que nous puissions comprendre.", "Je veux que nous puissions nager.", "Je veux que nous sachions la vérité.", "Je veux que nous sachions le faire.", "Je veux que nous sachions comprendre.", "Je veux que nous sachions nager.",
+                                "Je veux que il soit content.", "Je veux que il soit contents.", "Je veux que il ait raison.", "Je veux que il ait confiance.", "Je veux que il aille bien.", "Je veux que il aille en ville.", "Je veux que il fasse attention.", "Je veux que il fasse du sport.", "Je veux que il puisse venir demain.", "Je veux que il puisse le faire.", "Je veux que il puisse comprendre.", "Je veux que il puisse nager.", "Je veux que il sache la vérité.", "Je veux que il sache le faire.", "Je veux que il sache comprendre.", "Je veux que il sache nager.",
+                                "Je veux que vous soyez content.", "Je veux que vous soyez contents.", "Je veux que vous ayez raison.", "Je veux que vous ayez confiance.", "Je veux que vous alliez bien.", "Je veux que vous alliez en ville.", "Je veux que vous fassiez attention.", "Je veux que vous fassiez du sport.", "Je veux que vous puissiez venir demain.", "Je veux que vous puissiez le faire.", "Je veux que vous puissiez comprendre.", "Je veux que vous puissiez nager.", "Je veux que vous sachiez la vérité.", "Je veux que vous sachiez le faire.", "Je veux que vous sachiez comprendre.", "Je veux que vous sachiez nager.",
+                                "Il vaut mieux que tu sois content.", "Il vaut mieux que tu sois contents.", "Il vaut mieux que tu aies raison.", "Il vaut mieux que tu aies confiance.", "Il vaut mieux que tu ailles bien.", "Il vaut mieux que tu ailles en ville.", "Il vaut mieux que tu fasses attention.", "Il vaut mieux que tu fasses du sport.", "Il vaut mieux que tu puisses venir demain.", "Il vaut mieux que tu puisses le faire.", "Il vaut mieux que tu puisses comprendre.", "Il vaut mieux que tu puisses nager.", "Il vaut mieux que tu saches la vérité.", "Il vaut mieux que tu saches le faire.", "Il vaut mieux que tu saches comprendre.", "Il vaut mieux que tu saches nager.",
+                                "Il vaut mieux que nous soyons content.", "Il vaut mieux que nous soyons contents.", "Il vaut mieux que nous ayons raison.", "Il vaut mieux que nous ayons confiance.", "Il vaut mieux que nous allions bien.", "Il vaut mieux que nous allions en ville.", "Il vaut mieux que nous fassions attention.", "Il vaut mieux que nous fassions du sport.", "Il vaut mieux que nous puissions venir demain.", "Il vaut mieux que nous puissions le faire.", "Il vaut mieux que nous puissions comprendre.", "Il vaut mieux que nous puissions nager.", "Il vaut mieux que nous sachions la vérité.", "Il vaut mieux que nous sachions le faire.", "Il vaut mieux que nous sachions comprendre.", "Il vaut mieux que nous sachions nager.",
+                                "Il vaut mieux que il soit content.", "Il vaut mieux que il soit contents.", "Il vaut mieux que il ait raison.", "Il vaut mieux que il ait confiance.", "Il vaut mieux que il aille bien.", "Il vaut mieux que il aille en ville.", "Il vaut mieux que il fasse attention.", "Il vaut mieux que il fasse du sport.", "Il vaut mieux que il puisse venir demain.", "Il vaut mieux que il puisse le faire.", "Il vaut mieux que il puisse comprendre.", "Il vaut mieux que il puisse nager.", "Il vaut mieux que il sache la vérité.", "Il vaut mieux que il sache le faire.", "Il vaut mieux que il sache comprendre.", "Il vaut mieux que il sache nager.",
+                                "Il vaut mieux que vous soyez content.", "Il vaut mieux que vous soyez contents.", "Il vaut mieux que vous ayez raison.", "Il vaut mieux que vous ayez confiance.", "Il vaut mieux que vous alliez bien.", "Il vaut mieux que vous alliez en ville.", "Il vaut mieux que vous fassiez attention.", "Il vaut mieux que vous fassiez du sport.", "Il vaut mieux que vous puissiez venir demain.", "Il vaut mieux que vous puissiez le faire.", "Il vaut mieux que vous puissiez comprendre.", "Il vaut mieux que vous puissiez nager.", "Il vaut mieux que vous sachiez la vérité.", "Il vaut mieux que vous sachiez le faire.", "Il vaut mieux que vous sachiez comprendre.", "Il vaut mieux que vous sachiez nager.",
+                                "Je doute que tu sois content.", "Je doute que tu sois contents.", "Je doute que tu aies raison.", "Je doute que tu aies confiance.", "Je doute que tu ailles bien.", "Je doute que tu ailles en ville.", "Je doute que tu fasses attention.", "Je doute que tu fasses du sport.", "Je doute que tu puisses venir demain.", "Je doute que tu puisses le faire.", "Je doute que tu puisses comprendre.", "Je doute que tu puisses nager.", "Je doute que tu saches la vérité.", "Je doute que tu saches le faire.", "Je doute que tu saches comprendre.", "Je doute que tu saches nager.",
+                                "Je doute que nous soyons content.", "Je doute que nous soyons contents.", "Je doute que nous ayons raison.", "Je doute que nous ayons confiance.", "Je doute que nous allions bien.", "Je doute que nous allions en ville.", "Je doute que nous fassions attention.", "Je doute que nous fassions du sport.", "Je doute que nous puissions venir demain.", "Je doute que nous puissions le faire.", "Je doute que nous puissions comprendre.", "Je doute que nous puissions nager.", "Je doute que nous sachions la vérité.", "Je doute que nous sachions le faire.", "Je doute que nous sachions comprendre.", "Je doute que nous sachions nager.",
+                                "Je doute que il soit content.", "Je doute que il soit contents.", "Je doute que il ait raison.", "Je doute que il ait confiance.", "Je doute que il aille bien.", "Je doute que il aille en ville.", "Je doute que il fasse attention.", "Je doute que il fasse du sport.", "Je doute que il puisse venir demain.", "Je doute que il puisse le faire.", "Je doute que il puisse comprendre.", "Je doute que il puisse nager.", "Je doute que il sache la vérité.", "Je doute que il sache le faire.", "Je doute que il sache comprendre.", "Je doute que il sache nager.",
+                                "Je doute que vous soyez content.", "Je doute que vous soyez contents.", "Je doute que vous ayez raison.", "Je doute que vous ayez confiance.", "Je doute que vous alliez bien.", "Je doute que vous alliez en ville.", "Je doute que vous fassiez attention.", "Je doute que vous fassiez du sport.", "Je doute que vous puissiez venir demain.", "Je doute que vous puissiez le faire.", "Je doute que vous puissiez comprendre.", "Je doute que vous puissiez nager.", "Je doute que vous sachiez la vérité.", "Je doute que vous sachiez le faire.", "Je doute que vous sachiez comprendre.", "Je doute que vous sachiez nager.",
+                                "Pourvu que tu sois content.", "Pourvu que tu sois contents.", "Pourvu que tu aies raison.", "Pourvu que tu aies confiance.", "Pourvu que tu ailles bien.", "Pourvu que tu ailles en ville.", "Pourvu que tu fasses attention.", "Pourvu que tu fasses du sport.", "Pourvu que tu puisses venir demain.", "Pourvu que tu puisses le faire.", "Pourvu que tu puisses comprendre.", "Pourvu que tu puisses nager.", "Pourvu que tu saches la vérité.", "Pourvu que tu saches le faire.", "Pourvu que tu saches comprendre.", "Pourvu que tu saches nager.",
+                                "Pourvu que nous soyons content.", "Pourvu que nous soyons contents.", "Pourvu que nous ayons raison.", "Pourvu que nous ayons confiance.", "Pourvu que nous allions bien.", "Pourvu que nous allions en ville.", "Pourvu que nous fassions attention.", "Pourvu que nous fassions du sport.", "Pourvu que nous puissions venir demain.", "Pourvu que nous puissions le faire.", "Pourvu que nous puissions comprendre.", "Pourvu que nous puissions nager.", "Pourvu que nous sachions la vérité.", "Pourvu que nous sachions le faire.", "Pourvu que nous sachions comprendre.", "Pourvu que nous sachions nager.",
+                                "Pourvu que il soit content.", "Pourvu que il soit contents.", "Pourvu que il ait raison.", "Pourvu que il ait confiance.", "Pourvu que il aille bien.", "Pourvu que il aille en ville.", "Pourvu que il fasse attention.", "Pourvu que il fasse du sport.", "Pourvu que il puisse venir demain.", "Pourvu que il puisse le faire.", "Pourvu que il puisse comprendre.", "Pourvu que il puisse nager.", "Pourvu que il sache la vérité.", "Pourvu que il sache le faire.", "Pourvu que il sache comprendre.", "Pourvu que il sache nager.",
+                                "Pourvu que vous soyez content.", "Pourvu que vous soyez contents.", "Pourvu que vous ayez raison.", "Pourvu que vous ayez confiance.", "Pourvu que vous alliez bien.", "Pourvu que vous alliez en ville.", "Pourvu que vous fassiez attention.", "Pourvu que vous fassiez du sport.", "Pourvu que vous puissiez venir demain.", "Pourvu que vous puissiez le faire.", "Pourvu que vous puissiez comprendre.", "Pourvu que vous puissiez nager.", "Pourvu que vous sachiez la vérité.", "Pourvu que vous sachiez le faire.", "Pourvu que vous sachiez comprendre.", "Pourvu que vous sachiez nager."
+                            ],
+                            hint: "Défi final ! Tous les verbes mélangés !"
+                        }
+                    ]
+                }
+            ];
+
+            const encouragements = [
+                { min: 0, max: 50, message: "Continue, tu vas y arriver !", color: "text-orange-600" },
+                { min: 51, max: 150, message: "Bien joué !", color: "text-blue-600" },
+                { min: 151, max: 300, message: "Excellent travail !", color: "text-green-600" },
+                { min: 301, max: 1000, message: "Champion du subjonctif !", color: "text-yellow-600" }
+            ];
+
+            const exampleSentences = {
+                wish: [
+                    { start: "Je veux que", end: "tu sois heureux/heureuse.", color: "text-blue-600" },
+                    { start: "Je voudrais que", end: "vous veniez avec nous.", color: "text-blue-600" },
+                    { start: "J'aimerais que", end: "nous partions ensemble.", color: "text-blue-600" },
+                    { start: "Je souhaite que", end: "tu réussisses ton examen.", color: "text-blue-600" },
+                    { start: "Je désire que", end: "vous fassiez attention.", color: "text-blue-600" },
+                    { start: "Il serait bon que", end: "nous ayons une réunion.", color: "text-blue-600" }
+                ],
+                necessity: [
+                    { start: "Il faut que", end: "tu sois à l'heure.", color: "text-red-600" },
+                    { start: "Il est nécessaire que", end: "vous ayez votre passeport.", color: "text-red-600" },
+                    { start: "Il est important que", end: "nous sachions la vérité.", color: "text-red-600" },
+                    { start: "Il est essentiel que", end: "tu fasses tes devoirs.", color: "text-red-600" },
+                    { start: "Il est indispensable que", end: "vous soyez présent(e)s.", color: "text-red-600" }
+                ],
+                doubt: [
+                    { start: "Je doute que", end: "il puisse venir.", color: "text-purple-600" },
+                    { start: "Je ne crois pas que", end: "tu sois prêt(e).", color: "text-purple-600" },
+                    { start: "Je ne pense pas que", end: "nous ayons le temps.", color: "text-purple-600" },
+                    { start: "Il est possible que", end: "il soit malade.", color: "text-purple-600" },
+                    { start: "Il se peut que", end: "vous soyez en retard.", color: "text-purple-600" }
+                ],
+                emotion: [
+                    { start: "Je suis content(e) que", end: "tu ailles mieux.", color: "text-yellow-700" },
+                    { start: "Je suis triste que", end: "vous partiez demain.", color: "text-yellow-700" },
+                    { start: "J'ai peur que", end: "nous soyons perdu(e)s.", color: "text-yellow-700" },
+                    { start: "Je regrette que", end: "tu ne puisses pas venir.", color: "text-yellow-700" },
+                    { start: "C'est dommage que", end: "il fasse mauvais.", color: "text-yellow-700" },
+                    { start: "Ça m'étonne que", end: "vous sachiez cela.", color: "text-yellow-700" }
+                ],
+                judgment: [
+                    { start: "Il est normal que", end: "tu sois fatigué(e).", color: "text-green-700" },
+                    { start: "Il est étrange que", end: "il ne soit pas là.", color: "text-green-700" },
+                    { start: "Il vaut mieux que", end: "nous partions tôt.", color: "text-green-700" },
+                    { start: "C'est bizarre qu'", end: "il ne réponde pas.", color: "text-green-700" },
+                    { start: "Il est rare que", end: "vous fassiez des erreurs.", color: "text-green-700" }
+                ],
+                goal: [
+                    { start: "Pour que", full: "Il utilise des schémas pour que tu comprennes bien.", color: "text-orange-700" },
+                    { start: "Afin que", full: "Je t'explique tout afin que nous puissions réussir.", color: "text-orange-700" }
+                ],
+                manner: [
+                    { start: "Bien que", full: "Nous sortons bien qu'il fasse froid dehors.", color: "text-indigo-700" },
+                    { start: "Sans que", full: "Il est parti sans que nous le sachions.", color: "text-indigo-700" },
+                    { start: "Avant que", full: "Prépare tes affaires avant que vous partiez en vacances.", color: "text-indigo-700" },
+                    { start: "À condition que", full: "Je suis d'accord à condition que vous soyez sérieux/sérieuses.", color: "text-indigo-700" }
+                ],
+                hope: [
+                    { start: "Pourvu que", full: "Pourvu que tu aies de la chance !", color: "text-pink-700" }
+                ]
+            };
+
+            useEffect(() => {
+                if (screen === 'game') {
+                    loadQuestion();
+                }
+            }, [currentLevel, currentQuestion, screen]);
+
+            const loadQuestion = () => {
+                const question = levels[currentLevel].questions[currentQuestion];
+                if (currentLevel === 0) {
+                    const shuffled = [...question.pieces].sort(() => Math.random() - 0.5);
+                    setAvailablePieces(shuffled);
+                    setSelectedPieces([]);
+                    setSelectedCategory('');
+                    setShowCategoryChoice(false);
+                } else if (currentLevel === 1) {
+                    const shuffled = [...question.pieces].sort(() => Math.random() - 0.5);
+                    setAvailablePieces(shuffled);
+                    setSelectedPieces([]);
+                    setSelectedVerb('');
+                    setShowVerbChoice(false);
+                } else if (currentLevel === 2) {
+                    setLevel3Selections([null, null, null, null]);
+                }
+                setShowHint(false);
+                setFeedback('');
+                setCorrectAnswer('');
+                setShowContinue(false);
+            };
+
+            const handlePieceClick = (piece, fromAvailable) => {
+                if (showContinue) return;
+                if (fromAvailable) {
+                    setSelectedPieces([...selectedPieces, piece]);
+                    setAvailablePieces(availablePieces.filter(p => p !== piece));
+                } else {
+                    setAvailablePieces([...availablePieces, piece]);
+                    setSelectedPieces(selectedPieces.filter(p => p !== piece));
+                }
+            };
+
+            const checkAnswer = () => {
+                const question = levels[currentLevel].questions[currentQuestion];
+                let isCorrect = false;
+
+                if (currentLevel === 0) {
+                    // Niveau 1 : d'abord vérifier l'ordre des morceaux, puis demander la catégorie
+                    if (!showCategoryChoice) {
+                        // Étape 1 : vérifier l'ordre des morceaux
+                        const userAnswer = selectedPieces.join(' ');
+                        const correctAnswer = question.pieces.join(' ');
+                        if (userAnswer === correctAnswer) {
+                            setFeedback('Bravo ! Maintenant, identifie la catégorie de ce marqueur.');
+                            setShowCategoryChoice(true);
+                            return;
+                        } else {
+                            setFeedback('Pas tout à fait... Réessaie !');
+                            return;
+                        }
+                    } else {
+                        // Étape 2 : vérifier le choix de la catégorie
+                        if (!selectedCategory) {
+                            setFeedback('Tu dois choisir une catégorie !');
+                            return;
+                        }
+                        isCorrect = selectedCategory === question.correctCategory;
+                        setCorrectAnswer(question.correct);
+                    }
+                } else if (currentLevel === 1) {
+                    // Niveau 2 : d'abord vérifier l'ordre des mots, puis demander l'infinitif
+                    if (!showVerbChoice) {
+                        // Étape 1 : vérifier l'ordre des mots
+                        const userAnswer = selectedPieces.join(' ');
+                        if (userAnswer === question.correct) {
+                            setFeedback('Bravo ! Maintenant, choisis l\'infinitif du verbe utilisé.');
+                            setShowVerbChoice(true);
+                            return;
+                        } else {
+                            setFeedback('Pas tout à fait... Réessaie !');
+                            return;
+                        }
+                    } else {
+                        // Étape 2 : vérifier le choix de l'infinitif
+                        if (!selectedVerb) {
+                            setFeedback('Tu dois choisir un verbe !');
+                            return;
+                        }
+                        isCorrect = selectedVerb === question.correctVerb;
+                        setCorrectAnswer(question.correct);
+                    }
+                } else if (currentLevel === 2) {
+                    if (level3Selections.some(s => s === null)) {
+                        setFeedback('Tu dois choisir un élément dans chaque colonne !');
+                        return;
+                    }
+                    const userSentence = level3Selections.join(' ');
+                    isCorrect = question.validCombinations.includes(userSentence);
+                    setCorrectAnswer(userSentence);
+                }
+
+                if (isCorrect) {
+                    const basePoints = currentLevel === 0 ? 10 : currentLevel === 1 ? 15 : 20;
+                    const newStreak = currentStreak + 1;
+                    setCurrentStreak(newStreak);
+                    if (newStreak > bestStreak) setBestStreak(newStreak);
+                    
+                    let bonusPoints = 0;
+                    let feedbackMsg = 'Bravo ! C\'est correct !';
+                    
+                    if (newStreak === 3) {
+                        bonusPoints = 5;
+                        feedbackMsg = 'Combo x3 ! Tu es en feu ! 🔥 +5 points bonus';
+                        setComboBonus(5);
+                    } else if (newStreak === 5) {
+                        bonusPoints = 15;
+                        feedbackMsg = 'Combo x5 INCROYABLE ! 🌟 +15 points bonus !';
+                        setComboBonus(15);
+                    } else if (newStreak > 5) {
+                        feedbackMsg = `Série de ${newStreak} ! Continue ! ⚡`;
+                    }
+                    
+                    const totalPoints = basePoints + bonusPoints;
+                    const newScores = [...levelScores];
+                    newScores[currentLevel] += totalPoints;
+                    setLevelScores(newScores);
+                    
+                    const newProgress = [...levelProgress];
+                    newProgress[currentLevel] += 1;
+                    setLevelProgress(newProgress);
+                    
+                    const currentQ = newProgress[currentLevel];
+                    const totalQ = levels[currentLevel].questions.length;
+                    if (currentQ === 5 && totalQ === 10) {
+                        setTimeout(() => setShowMidLevelMessage(true), 1000);
+                    } else if (currentQ === 7 && totalQ === 10) {
+                        setTimeout(() => setShowChallengeMessage(true), 1000);
+                    }
+                    
+                    setFeedback(feedbackMsg);
+                    setShowContinue(true);
+                    
+                    if (currentLevel === 1 && question.hasNegation) {
+                        setTimeout(() => setShowNegationExplanation(true), 800);
+                    }
+                } else {
+                    setCurrentStreak(0);
+                    setComboBonus(0);
+                    setFeedback('Pas tout à fait... Réessaie !');
+                }
+            };
+
+            const handleContinue = () => {
+                if (currentQuestion < levels[currentLevel].questions.length - 1) {
+                    setCurrentQuestion(currentQuestion + 1);
+                } else {
+                    const percentage = (levelProgress[currentLevel] / levels[currentLevel].questions.length) * 100;
+                    if (percentage === 100) {
+                        const newScores = [...levelScores];
+                        newScores[currentLevel] += 50;
+                        setLevelScores(newScores);
+                    }
+                    setScreen('results');
+                }
+            };
+
+            const getTotalScore = () => levelScores.reduce((sum, score) => sum + score, 0);
+            const getEncouragement = () => {
+                const total = getTotalScore();
+                const percentage = getLevelPercentage(currentLevel);
+                if (percentage === 0) return { message: "Prêt à commencer ? Bonne chance ! 🚀", color: "text-blue-600" };
+                if (percentage === 100) return { message: "Tu es un champion du subjonctif ! 🏆👑", color: "text-yellow-500" };
+                if (percentage >= 90) return { message: "EXCELLENT ! Super bien joué ! ⭐✨", color: "text-green-600" };
+                if (percentage >= 80) return { message: "TRÈS BIEN ! Tu maîtrises bien le subjonctif ! 👏", color: "text-blue-600" };
+                if (percentage >= 70) return { message: "BIEN ! Continue à t'entraîner ! 💪", color: "text-blue-500" };
+                if (percentage >= 60) return { message: "PAS MAL ! Tu progresses ! 📈", color: "text-orange-600" };
+                return { message: "COURAGE ! Réessaie, tu vas y arriver ! 💙", color: "text-purple-600" };
+            };
+            const getLevelPercentage = (level) => (levelProgress[level] / levels[level].questions.length) * 100;
+            const canAccessLevel = (level) => true;
+            const handleLevelClick = (level) => { setCurrentLevel(level); setCurrentQuestion(0); setScreen('game'); };
+            const toggleVerbExpansion = (verb) => setExpandedVerbs({ ...expandedVerbs, [verb]: !expandedVerbs[verb] });
+            const handleLevel3Selection = (columnIndex, value) => { const newSelections = [...level3Selections]; newSelections[columnIndex] = value; setLevel3Selections(newSelections); };
+
+            if (screen === 'intro') {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-purple-100 via-blue-100 to-pink-100 p-8">
+                        <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl p-8">
+                            <h1 className="text-4xl font-bold text-center mb-8 text-purple-700">Bienvenue dans l'univers du Subjonctif !</h1>
+                            <div className="mb-8 p-6 bg-blue-50 rounded-xl">
+                                <h2 className="text-2xl font-bold mb-4 text-blue-700">La règle de base</h2>
+                                <p className="text-lg mb-4">Le subjonctif s'utilise après certaines expressions qui expriment un souhait, une nécessité, un doute ou une émotion.</p>
+                                <div className="bg-white p-4 rounded-lg text-center text-xl font-semibold">
+                                    <span className="text-blue-600">[Marqueur du subjonctif]</span> + <span className="text-green-600"> [Sujet]</span> + <span className="text-orange-600"> [Verbe au subjonctif]</span>
+                                </div>
+                            </div>
+                            <div className="mb-8 p-6 bg-green-50 rounded-xl">
+                                <h2 className="text-2xl font-bold mb-4 text-green-700">Exemples</h2>
+                                <div className="space-y-3 text-lg">
+                                    <p><span className="text-blue-600 font-bold">Il faut que</span><span className="text-green-600 font-bold"> tu</span><span className="text-orange-600 font-bold"> sois</span> patient.</p>
+                                    <p><span className="text-blue-600 font-bold">Je veux que</span><span className="text-green-600 font-bold"> vous</span><span className="text-orange-600 font-bold"> ayez</span> confiance.</p>
+                                    <p><span className="text-blue-600 font-bold">Bien qu'</span><span className="text-green-600 font-bold">il</span><span className="text-orange-600 font-bold"> fasse</span> froid, nous sortons.</p>
+                                </div>
+                            </div>
+                            <div className="mb-8 p-6 bg-orange-50 rounded-xl">
+                                <h2 className="text-2xl font-bold mb-4 text-orange-700">Les verbes irréguliers à retenir</h2>
+                                <p className="text-sm mb-4 text-gray-600">Clique sur un verbe pour voir sa conjugaison complète</p>
+                                {Object.keys(verbConjugations).map((verbKey) => {
+                                    const verb = verbConjugations[verbKey];
+                                    return (
+                                        <div key={verbKey} className="mb-3">
+                                            <button onClick={() => toggleVerbExpansion(verbKey)} className="w-full text-left p-3 bg-white rounded-lg hover:bg-gray-50 transition flex justify-between items-center">
+                                                <span className="font-bold text-lg">{verb.name}</span>
+                                                {expandedVerbs[verbKey] ? '▲' : '▼'}
+                                            </button>
+                                            {expandedVerbs[verbKey] && (
+                                                <div className="mt-2 p-4 bg-white rounded-lg border-2" style={{borderColor: verb.color}}>
+                                                    <div className="grid grid-cols-2 gap-6">
+                                                        <div>
+                                                            <h4 className="font-bold text-center mb-3 text-gray-700">Singulier</h4>
+                                                            {verb.forms.slice(0, 3).map((form, idx) => {
+                                                                const uniqueRadicals = [...new Set(verb.forms.map(f => f.radical))];
+                                                                const radicalColors = ['#DC2626', '#2563EB', '#059669', '#7C3AED'];
+                                                                const radicalIndex = uniqueRadicals.indexOf(form.radical);
+                                                                const radicalColor = radicalColors[radicalIndex % radicalColors.length];
+                                                                
+                                                                return (
+                                                                    <div key={idx} className="text-lg mb-2">
+                                                                        {form.subject} <span style={{color: radicalColor}} className="font-bold">{form.radical}</span><span className="font-semibold text-gray-800">{form.ending}</span>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-bold text-center mb-3 text-gray-700">Pluriel</h4>
+                                                            {verb.forms.slice(3).map((form, idx) => {
+                                                                const uniqueRadicals = [...new Set(verb.forms.map(f => f.radical))];
+                                                                const radicalColors = ['#DC2626', '#2563EB', '#059669', '#7C3AED'];
+                                                                const radicalIndex = uniqueRadicals.indexOf(form.radical);
+                                                                const radicalColor = radicalColors[radicalIndex % radicalColors.length];
+                                                                
+                                                                return (
+                                                                    <div key={idx} className="text-lg mb-2">
+                                                                        {form.subject} <span style={{color: radicalColor}} className="font-bold">{form.radical}</span><span className="font-semibold text-gray-800">{form.ending}</span>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="flex gap-4 justify-center">
+                                <button onClick={() => setScreen('classification')} className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 rounded-xl text-xl font-bold transition">Voir les marqueurs classés</button>
+                                <button onClick={() => setScreen('levelSelect')} className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-xl text-xl font-bold transition">Commencer les jeux !</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (screen === 'classification') {
+                const markers = {
+                    wish: [
+                        { start: "Je veux que", end: "tu sois heureux/heureuse." },
+                        { start: "Je voudrais que", end: "vous veniez avec nous." },
+                        { start: "J'aimerais qu'", end: "il parte avec nous." },
+                        { start: "Je souhaite que", end: "tu réussisses ton examen." },
+                        { start: "Je désire que", end: "vous fassiez attention." },
+                        { start: "Il serait bon que", end: "nous ayons une réunion." }
+                    ],
+                    need: [
+                        { start: "Il faut que", end: "tu sois à l'heure." },
+                        { start: "Il est nécessaire que", end: "vous ayez votre passeport." },
+                        { start: "Il est important que", end: "nous sachions la vérité." },
+                        { start: "Il est essentiel que", end: "tu fasses tes devoirs." },
+                        { start: "Il est indispensable que", end: "vous soyez présent(e)s." }
+                    ],
+                    doubt: [
+                        { start: "Je doute qu'", end: "il puisse venir." },
+                        { start: "Je ne crois pas que", end: "tu sois prêt(e)." },
+                        { start: "Je ne pense pas que", end: "nous ayons le temps." },
+                        { start: "Il est possible qu'", end: "elle soit malade." },
+                        { start: "Il se peut que", end: "vous soyez en retard." }
+                    ],
+                    emotion: [
+                        { start: "Je suis content(e) que", end: "tu ailles mieux." },
+                        { start: "Je suis triste que", end: "vous partiez demain." },
+                        { start: "J'ai peur que", end: "nous soyons perdu(e)s." },
+                        { start: "Je regrette que", end: "tu ne puisses pas venir." },
+                        { start: "C'est dommage qu'", end: "il fasse mauvais." },
+                        { start: "Ça m'étonne que", end: "vous sachiez cela." }
+                    ],
+                    judgment: [
+                        { start: "Il est normal que", end: "tu sois fatigué(e)." },
+                        { start: "Il est étrange qu'", end: "elle ne soit pas là." },
+                        { start: "Il vaut mieux que", end: "nous partions tôt." },
+                        { start: "C'est bizarre qu'", end: "il ne réponde pas." },
+                        { start: "Il est rare que", end: "vous fassiez des erreurs." }
+                    ],
+                    goal: [
+                        { start: "Pour que", full: "Il utilise des schémas pour que tu comprennes bien." },
+                        { start: "Afin que", full: "Je t'explique tout afin que nous puissions réussir." }
+                    ],
+                    manner: [
+                        { start: "Bien que", full: "Nous sortons bien qu'il fasse froid dehors." },
+                        { start: "Sans que", full: "Il est parti sans que nous le sachions." },
+                        { start: "Avant que", full: "Prépare tes affaires avant que vous partiez en vacances." },
+                        { start: "À condition que", full: "Je suis d'accord à condition que vous soyez sérieux/sérieuses." }
+                    ],
+                    hope: [
+                        { start: "Pourvu que", full: "Pourvu que tu aies de la chance !" }
+                    ]
+                };
+                
+                const renderMarker = (marker, key, isPurpose = false) => {
+                    const sentence = isPurpose ? marker.full : (marker.start + ' ' + marker.end);
+                    const coloredParts = parseAndColorSentence(sentence, marker.start);
+                    
+                    return (
+                        <div key={key} className="mb-2">
+                            <div className="flex items-center gap-2">
+                                <span className="font-semibold text-lg">{marker.start}</span>
+                                <button onClick={() => setExpandedExamples({...expandedExamples, [key]: !expandedExamples[key]})} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition">
+                                    {expandedExamples[key] ? 'Masquer' : 'Cliquez ici'}
+                                </button>
+                            </div>
+                            {expandedExamples[key] && (
+                                <div className="mt-3 ml-4 p-4 bg-white rounded-lg shadow-inner">
+                                    {renderColoredSentence(coloredParts)}
+                                </div>
+                            )}
+                        </div>
+                    );
+                };
+                
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-purple-100 via-blue-100 to-pink-100 p-8">
+                        <div className="max-w-5xl mx-auto bg-white rounded-3xl shadow-2xl p-8">
+                            <h1 className="text-4xl font-bold text-center mb-8 text-purple-700">Pourquoi utilise-t-on le subjonctif ?</h1>
+                            
+                            <div className="mb-8 p-4 bg-blue-50 rounded-xl border-2 border-blue-300">
+                                <h3 className="text-lg font-bold mb-3 text-blue-800 text-center">📚 Légende des couleurs :</h3>
+                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-5 h-5 rounded" style={{backgroundColor: '#DC2626'}}></div>
+                                        <span className="font-medium">Marqueur / Expression</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-5 h-5 rounded" style={{backgroundColor: '#2563EB'}}></div>
+                                        <span className="font-medium">Sujet</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-5 h-5 rounded" style={{backgroundColor: '#059669'}}></div>
+                                        <span className="font-medium">Verbe au subjonctif</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-5 h-5 rounded" style={{backgroundColor: '#F97316'}}></div>
+                                        <span className="font-medium">Négation (ne...pas)</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-5 h-5 rounded" style={{backgroundColor: '#374151'}}></div>
+                                        <span className="font-medium">Complément</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-6">
+                                <div className="p-6 bg-blue-100 rounded-xl border-4 border-blue-300">
+                                    <h2 className="text-2xl font-bold mb-4 text-blue-700">💙 Exprimer un souhait, une envie</h2>
+                                    {markers.wish.map((m, i) => renderMarker(m, `wish-${i}`))}
+                                </div>
+                                <div className="p-6 bg-red-100 rounded-xl border-4 border-red-300">
+                                    <h2 className="text-2xl font-bold mb-4 text-red-700">⚡ Exprimer un besoin, une nécessité</h2>
+                                    {markers.need.map((m, i) => renderMarker(m, `need-${i}`))}
+                                </div>
+                                <div className="p-6 bg-purple-100 rounded-xl border-4 border-purple-300">
+                                    <h2 className="text-2xl font-bold mb-4 text-purple-700">🤔 Exprimer un doute, une incertitude</h2>
+                                    {markers.doubt.map((m, i) => renderMarker(m, `doubt-${i}`))}
+                                </div>
+                                <div className="p-6 bg-yellow-100 rounded-xl border-4 border-yellow-300">
+                                    <h2 className="text-2xl font-bold mb-4 text-yellow-700">😊 Exprimer une émotion, un sentiment</h2>
+                                    {markers.emotion.map((m, i) => renderMarker(m, `emotion-${i}`))}
+                                </div>
+                                <div className="p-6 bg-green-100 rounded-xl border-4 border-green-300">
+                                    <h2 className="text-2xl font-bold mb-4 text-green-700">📝 Exprimer un jugement, une opinion</h2>
+                                    {markers.judgment.map((m, i) => renderMarker(m, `judgment-${i}`))}
+                                </div>
+                                <div className="p-6 bg-orange-100 rounded-xl border-4 border-orange-300">
+                                    <h2 className="text-2xl font-bold mb-4 text-orange-700">🎯 Exprimer un but</h2>
+                                    {markers.goal.map((m, i) => renderMarker(m, `goal-${i}`, true))}
+                                </div>
+                                <div className="p-6 bg-indigo-100 rounded-xl border-4 border-indigo-300">
+                                    <h2 className="text-2xl font-bold mb-4 text-indigo-700">🌟 Exprimer une manière</h2>
+                                    {markers.manner.map((m, i) => renderMarker(m, `manner-${i}`, true))}
+                                </div>
+                                <div className="p-6 bg-pink-100 rounded-xl border-4 border-pink-300">
+                                    <h2 className="text-2xl font-bold mb-4 text-pink-700">✨ Et un dernier pour la fin</h2>
+                                    {markers.hope.map((m, i) => {
+                                        const sentence = m.full;
+                                        const coloredParts = parseAndColorSentence(sentence, m.start);
+                                        const key = `hope-${i}`;
+                                        
+                                        return (
+                                            <div key={key} className="mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-semibold text-lg">{m.start}</span>
+                                                    <button onClick={() => setExpandedExamples({...expandedExamples, [key]: !expandedExamples[key]})} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition">
+                                                        {expandedExamples[key] ? 'Masquer' : 'Cliquez ici'}
+                                                    </button>
+                                                </div>
+                                                {expandedExamples[key] && (
+                                                    <div className="mt-3 ml-4 p-4 bg-white rounded-lg shadow-inner">
+                                                        {renderColoredSentence(coloredParts)}
+                                                        <div className="mt-4 p-3 bg-pink-50 rounded-lg border-2 border-pink-300">
+                                                            <p className="text-lg font-bold text-pink-700 text-center">
+                                                                Pourvu que = J'espère que
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                            <div className="flex gap-4 justify-center mt-8">
+                                <button onClick={() => setScreen('intro')} className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-xl text-lg font-bold transition">Retour aux règles de base</button>
+                                <button onClick={() => setScreen('levelSelect')} className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-xl text-xl font-bold transition">Commencer les jeux !</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (screen === 'levelSelect') {
+                const totalScore = getTotalScore();
+                const encouragement = getEncouragement();
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-purple-100 via-blue-100 to-pink-100 p-8">
+                        <div className="max-w-4xl mx-auto">
+                            <div className="bg-white rounded-3xl shadow-2xl p-8 mb-6">
+                                <h1 className="text-4xl font-bold text-center mb-4 text-purple-700">Choisis ton niveau</h1>
+                                <div className="text-center mb-6">
+                                    <div className="text-3xl font-bold text-blue-600">Score total : {totalScore} points</div>
+                                    <div className={"text-2xl font-bold mt-2 " + encouragement.color}>{encouragement.message}</div>
+                                </div>
+                            </div>
+                            <div className="grid gap-6">
+                                {levels.map((level, index) => {
+                                    const percentage = getLevelPercentage(index);
+                                    return (
+                                        <div key={index}>
+                                            <button onClick={() => handleLevelClick(index)} className="w-full p-6 rounded-2xl shadow-lg transition transform hover:scale-105 bg-gradient-to-r from-blue-500 to-purple-500 text-white cursor-pointer">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="text-4xl">{level.icon}</div>
+                                                        <div className="text-left">
+                                                            <h2 className="text-2xl font-bold">{level.title}</h2>
+                                                            <p className="text-sm opacity-90">{level.description}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className="text-3xl font-bold">{levelScores[index]} pts</div>
+                                                        <div className="text-sm">{Math.round(percentage)}% complété</div>
+                                                    </div>
+                                                </div>
+                                                <div className="mt-4 bg-white bg-opacity-30 rounded-full h-3 overflow-hidden">
+                                                    <div className="bg-white h-full transition-all duration-500" style={{ width: percentage + '%' }} />
+                                                </div>
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <button onClick={() => setScreen('intro')} className="mt-6 w-full bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-xl text-lg font-bold transition">Retour aux explications</button>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (screen === 'game') {
+                const level = levels[currentLevel];
+                const question = level.questions[currentQuestion];
+                const progress = ((currentQuestion + 1) / level.questions.length) * 100;
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-purple-100 via-blue-100 to-pink-100 p-8">
+                        <div className="max-w-4xl mx-auto">
+                            <div className="bg-white rounded-3xl shadow-2xl p-8">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h1 className="text-3xl font-bold text-purple-700">{level.title}</h1>
+                                    <div className="flex flex-col items-end">
+                                        <div className="text-2xl font-bold text-blue-600">{levelScores[currentLevel]} pts</div>
+                                        {currentStreak > 0 && (
+                                            <div className="text-sm font-semibold text-orange-600 mt-1">
+                                                ⚡ Série : {currentStreak} d'affilée !
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="mb-6">
+                                    <div className="flex justify-between text-sm mb-2">
+                                        <span>Question {currentQuestion + 1}/{level.questions.length}</span>
+                                        <span className="font-semibold">{Math.round(progress)}%</span>
+                                    </div>
+                                    <div className="bg-gray-200 rounded-full h-4 overflow-hidden shadow-inner">
+                                        <div 
+                                            className={`h-full transition-all duration-500 ${
+                                                progress >= 70 ? 'bg-gradient-to-r from-green-500 to-green-600' : 
+                                                progress >= 40 ? 'bg-gradient-to-r from-orange-500 to-orange-600' : 
+                                                'bg-gradient-to-r from-red-500 to-red-600'
+                                            }`}
+                                            style={{ width: progress + '%' }} 
+                                        />
+                                    </div>
+                                </div>
+                                {currentLevel === 0 && (
+                                    <>
+                                        <div className="mb-8">
+                                            <h2 className="text-xl font-semibold mb-4 text-gray-700">Morceaux disponibles :</h2>
+                                            <div className="flex flex-wrap gap-3 min-h-[100px] p-4 bg-gray-100 rounded-xl">
+                                                {availablePieces.map((piece, index) => (
+                                                    <button key={index} onClick={() => handlePieceClick(piece, true)} className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition transform hover:scale-105 shadow-lg" disabled={showCategoryChoice || showContinue}>{piece}</button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="mb-8">
+                                            <h2 className="text-xl font-semibold mb-4 text-gray-700">Ta phrase :</h2>
+                                            {!showCategoryChoice ? (
+                                                <div className="flex flex-wrap gap-3 min-h-[100px] p-4 bg-green-100 rounded-xl border-4 border-green-300">
+                                                    {selectedPieces.map((piece, index) => (
+                                                        <button key={index} onClick={() => handlePieceClick(piece, false)} className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition transform hover:scale-105 shadow-lg" disabled={showCategoryChoice || showContinue}>{piece}</button>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="p-6 bg-green-50 rounded-xl border-4 border-green-300 mb-6">
+                                                    <p className="text-2xl font-semibold text-gray-800 mb-4">{selectedPieces.join(' ')}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                        {showCategoryChoice && (
+                                            <div className="mb-8">
+                                                <h2 className="text-xl font-semibold mb-4 text-gray-700">Ce marqueur exprime :</h2>
+                                                <div className="flex flex-wrap gap-4 justify-center">
+                                                    {question.categories.map((category, index) => (
+                                                        <button key={index} onClick={() => setSelectedCategory(category)} className={`px-8 py-4 rounded-xl font-bold text-lg transition transform hover:scale-105 ${selectedCategory === category ? 'bg-purple-600 text-white shadow-lg' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`} disabled={showContinue}>
+                                                            {category}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                                {currentLevel === 1 && (
+                                    <>
+                                        <div className="mb-8">
+                                            <h2 className="text-xl font-semibold mb-4 text-gray-700">Mots disponibles :</h2>
+                                            <div className="flex flex-wrap gap-3 min-h-[100px] p-4 bg-gray-100 rounded-xl">
+                                                {availablePieces.map((piece, index) => (
+                                                    <button key={index} onClick={() => handlePieceClick(piece, true)} className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition transform hover:scale-105 shadow-lg" disabled={showVerbChoice || showContinue}>{piece}</button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="mb-8">
+                                            <h2 className="text-xl font-semibold mb-4 text-gray-700">Ta phrase :</h2>
+                                            {!showVerbChoice ? (
+                                                <div className="flex flex-wrap gap-3 min-h-[100px] p-4 bg-green-100 rounded-xl border-4 border-green-300">
+                                                    {selectedPieces.map((piece, index) => (
+                                                        <button key={index} onClick={() => handlePieceClick(piece, false)} className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold transition transform hover:scale-105 shadow-lg" disabled={showVerbChoice || showContinue}>{piece}</button>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="p-6 bg-green-50 rounded-xl border-4 border-green-300">
+                                                    <p className="text-2xl font-semibold text-gray-800">
+                                                        {selectedPieces.map((piece, index) => {
+                                                            // Vérifier si ce mot est un verbe conjugué
+                                                            const isVerb = Object.values(verbConjugations).some(verb => 
+                                                                verb.forms.some(form => form.form === piece.replace(/[.,!?;]$/, ''))
+                                                            );
+                                                            return (
+                                                                <span key={index}>
+                                                                    <span className={isVerb ? "text-orange-600 font-bold" : ""}>{piece}</span>
+                                                                    {index < selectedPieces.length - 1 ? ' ' : ''}
+                                                                </span>
+                                                            );
+                                                        })}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                        {showVerbChoice && (
+                                            <div className="mb-6">
+                                                <h2 className="text-xl font-semibold mb-4 text-gray-700">Quel est l'infinitif du verbe utilisé ?</h2>
+                                                <div className="flex flex-wrap gap-3">
+                                                    {question.verbs.map((verb, index) => (
+                                                        <button key={index} onClick={() => !showContinue && setSelectedVerb(verb)} className={"px-6 py-3 rounded-lg font-semibold transition transform hover:scale-105 shadow-lg " + (selectedVerb === verb ? "bg-purple-600 text-white" : "bg-purple-200 text-purple-800 hover:bg-purple-300")} disabled={showContinue}>{verb}</button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {showContinue && correctAnswer && (
+                                            <div className="mb-6 p-6 bg-green-50 border-4 border-green-400 rounded-xl">
+                                                <h3 className="text-xl font-bold mb-2 text-green-700">Phrase correcte :</h3>
+                                                <p className="text-2xl font-semibold text-gray-800">{correctAnswer}</p>
+                                                <p className="text-lg mt-2 text-green-700">L'infinitif est : <strong>{question.correctVerb}</strong></p>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                                {currentLevel === 2 && (
+                                    <>
+                                        <div className="mb-6">
+                                            <h2 className="text-xl font-semibold mb-4 text-gray-700">Construis ta phrase en choisissant dans chaque colonne :</h2>
+                                            <div className="grid grid-cols-4 gap-4">
+                                                {question.columns.map((column, colIndex) => (
+                                                    <div key={colIndex} className="space-y-2">
+                                                        <h3 className="font-bold text-center text-sm mb-2">{colIndex === 0 && 'Marqueur'}{colIndex === 1 && 'Sujet'}{colIndex === 2 && 'Verbe'}{colIndex === 3 && 'Fin'}</h3>
+                                                        {column.map((item, itemIndex) => (
+                                                            <button key={itemIndex} onClick={() => !showContinue && handleLevel3Selection(colIndex, item)} className={"w-full px-3 py-2 rounded-lg text-sm font-semibold transition " + (level3Selections[colIndex] === item ? "bg-blue-600 text-white" : "bg-blue-100 text-blue-800 hover:bg-blue-200")} disabled={showContinue}>{item}</button>
+                                                        ))}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="mb-6 p-4 bg-purple-50 rounded-xl border-2 border-purple-300">
+                                            <h3 className="font-bold mb-2 text-purple-700">Ta phrase :</h3>
+                                            <p className="text-2xl font-semibold text-gray-800">{level3Selections.every(s => s !== null) ? level3Selections.join(' ') : '... Choisis dans chaque colonne ...'}</p>
+                                        </div>
+                                        {showContinue && correctAnswer && (
+                                            <div className="mb-6 p-6 bg-green-50 border-4 border-green-400 rounded-xl">
+                                                <h3 className="text-xl font-bold mb-2 text-green-700">Ta phrase est correcte !</h3>
+                                                <p className="text-2xl font-semibold text-gray-800">{correctAnswer}</p>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                                {feedback && (
+                                    <div className={"mb-6 p-4 rounded-xl text-center text-xl font-bold " + (feedback.includes('Bravo') ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>{feedback}</div>
+                                )}
+                                <div className="flex gap-4">
+                                    {!showContinue && (
+                                        <>
+                                            <button onClick={() => setShowHint(!showHint)} className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-xl font-bold transition">{showHint ? 'Masquer l\'indice' : 'Indice'}</button>
+                                            <button onClick={() => loadQuestion()} className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-xl font-bold transition">Recommencer</button>
+                                            <button onClick={checkAnswer} disabled={(currentLevel === 0 && !showCategoryChoice && selectedPieces.length === 0) || (currentLevel === 0 && showCategoryChoice && !selectedCategory) || (currentLevel === 1 && !showVerbChoice && selectedPieces.length === 0) || (currentLevel === 1 && showVerbChoice && !selectedVerb)} className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-xl font-bold transition">Valider</button>
+                                        </>
+                                    )}
+                                    {showContinue && (
+                                        <button onClick={handleContinue} className="flex-1 bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-xl text-xl font-bold transition">Continuer</button>
+                                    )}
+                                </div>
+                                {showHint && (
+                                    <div className="mt-6 p-4 bg-yellow-100 border-2 border-yellow-400 rounded-xl">
+                                        <div className="flex items-start gap-2"><span className="text-2xl">💡</span><p className="text-lg text-yellow-800">{question.hint}</p></div>
+                                    </div>
+                                )}
+                                <button onClick={() => setScreen('levelSelect')} className="mt-6 w-full bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-xl font-bold transition">Retour aux niveaux</button>
+                            </div>
+                        </div>
+                        {showNegationExplanation && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                                <div className="bg-white rounded-2xl p-8 max-w-2xl shadow-2xl max-h-screen overflow-y-auto">
+                                    <h2 className="text-3xl font-bold mb-6 text-center text-purple-700">Attention à la forme !</h2>
+                                    <div className="mb-6">
+                                        <h3 className="text-xl font-bold mb-3">Avec cette phrase, observe la différence :</h3>
+                                        <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+                                            <p className="font-semibold text-blue-700 mb-2">À la forme affirmative (certitude) → INDICATIF</p>
+                                            <p className="text-xl">Je crois qu'il <strong>veut</strong> partir.</p>
+                                            <p className="text-sm italic text-gray-600 mt-1">(Je suis certain, j'utilise l'indicatif)</p>
+                                        </div>
+                                        <div className="p-4 bg-red-50 rounded-lg">
+                                            <p className="font-semibold text-red-700 mb-2">À la forme négative (doute) → SUBJONCTIF</p>
+                                            <p className="text-xl">Je <span className="text-red-600 font-bold">ne</span> crois <span className="text-red-600 font-bold">pas</span> qu'il <strong>veuille</strong> partir.</p>
+                                            <p className="text-sm italic text-gray-600 mt-1">(Je doute, j'utilise le subjonctif)</p>
+                                        </div>
+                                    </div>
+                                    <div className="mb-6 p-4 bg-yellow-50 rounded-lg border-2 border-yellow-400">
+                                        <h3 className="font-bold text-lg mb-2 text-yellow-800">Règle importante :</h3>
+                                        <ul className="space-y-2 text-lg">
+                                            <li>• <strong>Croire, penser, être sûr</strong> à l'affirmatif = INDICATIF (certitude)</li>
+                                            <li>• <span className="text-red-600 font-bold">Ne pas</span> <strong>croire</strong>, <span className="text-red-600 font-bold">ne pas</span> <strong>penser</strong>, <span className="text-red-600 font-bold">ne pas</span> <strong>être sûr</strong> = SUBJONCTIF (doute)</li>
+                                        </ul>
+                                    </div>
+                                    <div className="mb-6 p-4 bg-green-50 rounded-lg">
+                                        <h3 className="font-bold mb-2 text-green-700">Autres exemples :</h3>
+                                        <p className="text-lg mb-2">• Je pense qu'elle <strong>est</strong> prête. (indicatif)</p>
+                                        <p className="text-lg">• Je <span className="text-red-600 font-bold">ne</span> pense <span className="text-red-600 font-bold">pas</span> qu'elle <strong>soit</strong> prête. (subjonctif)</p>
+                                    </div>
+                                    <button onClick={() => setShowNegationExplanation(false)} className="w-full bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 rounded-xl text-xl font-bold transition">J'ai compris !</button>
+                                </div>
+                            </div>
+                        )}
+                        {showMidLevelMessage && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                                <div className="bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl p-8 max-w-lg shadow-2xl text-center">
+                                    <div className="text-6xl mb-4">🎉</div>
+                                    <h2 className="text-3xl font-bold mb-4 text-purple-700">Super ! Tu es à mi-chemin !</h2>
+                                    <p className="text-xl mb-6 text-gray-700">Les 5 prochaines questions t'attendent !</p>
+                                    <button onClick={() => setShowMidLevelMessage(false)} className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 rounded-xl text-xl font-bold transition">Continuer ! 💪</button>
+                                </div>
+                            </div>
+                        )}
+                        {showChallengeMessage && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                                <div className="bg-gradient-to-br from-orange-100 to-red-100 rounded-2xl p-8 max-w-lg shadow-2xl text-center border-4 border-orange-400">
+                                    <div className="text-6xl mb-4">🎯</div>
+                                    <h2 className="text-3xl font-bold mb-4 text-orange-700">DÉFI !</h2>
+                                    <p className="text-xl mb-6 text-gray-700">Incroyable ! Plus que 3 questions pour réussir ce niveau ! 🌟</p>
+                                    <button onClick={() => setShowChallengeMessage(false)} className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-4 rounded-xl text-xl font-bold transition">J'y vais ! 🔥</button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+
+            if (screen === 'results') {
+                const percentage = getLevelPercentage(currentLevel);
+                const passed = percentage >= 90;
+                const totalScore = getTotalScore();
+                const encouragement = getEncouragement();
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-purple-100 via-blue-100 to-pink-100 p-8">
+                        <div className="max-w-2xl mx-auto">
+                            <div className="bg-white rounded-3xl shadow-2xl p-8 text-center">
+                                <div className="text-6xl mb-6">{passed ? '🎉' : '💪'}</div>
+                                <h1 className="text-4xl font-bold mb-4 text-purple-700">{passed ? 'Félicitations !' : 'Continue !'}</h1>
+                                <div className="mb-8">
+                                    <div className="text-5xl font-bold text-blue-600 mb-2">{Math.round(percentage)}%</div>
+                                    <p className="text-2xl text-gray-700">{levelProgress[currentLevel]}/{levels[currentLevel].questions.length} bonnes réponses</p>
+                                </div>
+                                <div className="mb-8 p-6 bg-gradient-to-r from-blue-100 to-purple-100 rounded-2xl">
+                                    <div className="text-3xl font-bold text-blue-700 mb-2">{levelScores[currentLevel]} points gagnés</div>
+                                    <div className="text-2xl font-bold text-gray-700">Score total : {totalScore} points</div>
+                                    <div className={"text-2xl font-bold mt-3 " + encouragement.color}>{encouragement.message}</div>
+                                </div>
+                                <div className="flex flex-col gap-4">
+                                    <button onClick={() => { setCurrentQuestion(0); const newProgress = [...levelProgress]; newProgress[currentLevel] = 0; setLevelProgress(newProgress); const newScores = [...levelScores]; newScores[currentLevel] = 0; setLevelScores(newScores); setScreen('game'); }} className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-4 rounded-xl text-xl font-bold transition">Recommencer ce niveau</button>
+                                    {passed && currentLevel < levels.length - 1 && (
+                                        <button onClick={() => { setCurrentLevel(currentLevel + 1); setCurrentQuestion(0); setScreen('game'); }} className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-xl text-xl font-bold transition">Niveau suivant</button>
+                                    )}
+                                    <button onClick={() => setScreen('levelSelect')} className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 rounded-xl text-xl font-bold transition">Voir tous les niveaux</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return <div>Erreur</div>;
+        }
+
+        ReactDOM.render(<SubjonctifGame />, document.getElementById('root'));
+    </script>
+</body>
+</html>
